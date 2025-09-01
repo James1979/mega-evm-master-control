@@ -1,6 +1,9 @@
 
-import argparse, json, time
+import argparse
+import json
+import time
 from pathlib import Path
+
 import pandas as pd
 
 def generate_stub(project_id: str, evm_path: Path, mc_path: Path):

@@ -1,0 +1,85 @@
+# .github/workflows/ci.yml
+# CI pipeline with lint, type-check, tests, coverage gate, and Codecov upload.
+# Each step includes a brief comment so reviewers can follow along.
+
+name: CI
+
+on:
+  push:
+    branches: [ main, feat/** ]         # Run on main and all feature branches
+  pull_request:
+    branches: [ main ]                  # Validate PRs targeting main
+
+# Required by some actions (e.g., Codecov) to read repo contents.
+permissions:
+  contents: read
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1) Check out repository code
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 2) Set up Python (match your README/tooling)
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # 3) Cache pip downloads between runs (faster CI)
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements*.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      # 4) Install project deps + QA/tooling used in CI
+      - name: Install deps
+        run: |
+          python -m pip install -U pip
+          pip install -r requirements.txt
+          # QA tools
+          pip install ruff mypy pytest pytest-cov pyarrow fastparquet types-PyYAML
+
+      # 5) Lint (fail fast on style issues)
+      - name: Ruff (lint)
+        run: ruff check .
+
+      # 6) Static typing
+      - name: Mypy (type check)
+        run: mypy --ignore-missing-imports .
+
+      # 7) Tests with coverage:
+      #    - Export PYTHONPATH so packages import from repo root
+      #    - Fail if coverage dips below 80% (you’re at ~84% locally)
+      #    - Produce coverage.xml for Codecov
+      - name: Pytest (with coverage XML + baseline gate)
+        run: |
+          export PYTHONPATH=$PWD
+          pytest -q --cov=./ \
+                    --cov-report=xml \
+                    --cov-report=term-missing \
+                    --cov-fail-under=80
+
+      # 8) Upload coverage to Codecov (token set via repo Secret: CODECOV_TOKEN)
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage.xml        # Match the file created above
+          flags: unittests
+          disable_search: true         # Don’t scan; use the exact path
+          fail_ci_if_error: true       # Make upload required
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+      # 9) Keep coverage.xml as a build artifact for debugging
+      - name: Save coverage artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-xml
+          path: coverage.xml

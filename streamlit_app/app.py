@@ -21,38 +21,33 @@ HOW TO TEACH THIS
 
 from __future__ import annotations
 
-# ---- Standard library imports
+# ── Standard library
 import json
 import os
 import platform
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, cast
 
-# ---- Third-party imports
+# ── Third-party
 import pandas as pd
 import plotly.express as px
 import streamlit as st
 import yaml
 
-# (Optional) for page icon; app works without it
+# Pillow is optional; only used for rendering a logo if present
 try:
-    from PIL import Image
-except Exception:
-    Image = None
+    from PIL import Image  # noqa: F401
+except Exception:  # pragma: no cover - optional dependency
+    Image = None  # type: ignore[assignment]
 
 
-# =============================================================================
-# 1) CONFIG LOADING
-# =============================================================================
+# ──────────────────────────────────────────────────────────────────────────────
+# 1) CONFIG LOADING  — merge config.yaml with defaults so missing keys never crash
+# ──────────────────────────────────────────────────────────────────────────────
 def load_config(cfg_path: Path) -> Dict[str, Any]:
-    """
-    Load config.yaml, merging with sane defaults.
-    • Centralizes all operational knobs (paths, thresholds, UI, alerts).
-    • If a key is missing, we fall back to defaults so the app still runs.
-    """
-    defaults = {
+    defaults: Dict[str, Any] = {
         "thresholds": {
             "cpi_red": 0.90,
             "spi_red": 0.85,
@@ -72,107 +67,70 @@ def load_config(cfg_path: Path) -> Dict[str, Any]:
             "default_procurement_delay_days": [0, 5, 15],
             "sensitivity": ["spearman", "pearson"],
         },
-        "ui": {
-            "logo_path": "assets/itcmanagement_group.jpg",
-            "theme": "dark",
-        },
+        "ui": {"logo_path": "assets/itcmanagement_group.jpg", "theme": "dark"},
         "scenario": {
             "delay_cost_rate_per_day": 15000,
             "spi_productivity_sensitivity": 0.5,
             "cpi_resource_sensitivity": 0.4,
         },
-        "ai": {
-            "provider": "env:LLM_PROVIDER",
-            "model": "env:LLM_MODEL",
-            "temperature": 0.2,
-            "max_tokens": 1200,
-        },
-        "alerts": {
-            "slack_enabled": True,
-            "email_enabled": True,
-            "jira_enabled": True,
-            "dry_run": True,  # SAFE BY DEFAULT FOR DEMOS
-        },
+        "ai": {"provider": "env:LLM_PROVIDER", "model": "env:LLM_MODEL", "temperature": 0.2, "max_tokens": 1200},
+        "alerts": {"slack_enabled": True, "email_enabled": True, "jira_enabled": True, "dry_run": True},
     }
 
     if cfg_path.exists():
         with cfg_path.open("r", encoding="utf-8") as f:
             user_cfg = yaml.safe_load(f) or {}
-        # Shallow merge: for each top-level key that is a dict, update defaults
         for k, v in user_cfg.items():
-            if isinstance(v, dict) and k in defaults:
-                defaults[k].update(v)
+            if isinstance(v, dict) and k in defaults and isinstance(defaults[k], dict):
+                defaults[k].update(v)  # shallow-merge dicts
             else:
                 defaults[k] = v
     return defaults
 
 
-# =============================================================================
-# 2) PATHS & PAGE SETUP
-# =============================================================================
-ROOT = Path(__file__).resolve().parents[1]                 # project root
-CFG_PATH = ROOT / "config.yaml"                            # config path
-CFG = load_config(CFG_PATH)                                # config dict
+# ──────────────────────────────────────────────────────────────────────────────
+# 2) PATHS & PAGE SETUP  — constants and page config (icon is a string path)
+# ──────────────────────────────────────────────────────────────────────────────
+ROOT = Path(__file__).resolve().parents[1]
+CFG_PATH = ROOT / "config.yaml"
+CFG = load_config(CFG_PATH)
 
-# Resolve important folders/files from config
 SAMPLES_DIR = ROOT / CFG["paths"]["samples_dir"]
 PROCESSED_DIR = ROOT / CFG["paths"]["processed_dir"]
 CHARTS_DIR = ROOT / CFG["paths"]["charts_dir"]
 
-# Processed data files used by the UI
 EVM_FP = PROCESSED_DIR / "evm_timeseries.parquet"
 MC_SUM_FP = PROCESSED_DIR / "monte_carlo_summary.parquet"
 PROC_FP = PROCESSED_DIR / "procurement_impacts.parquet"
 RUNS_FP = PROCESSED_DIR / "monte_carlo_runs.parquet"
 SCURVE_FP = PROCESSED_DIR / "forecast_s_curves.parquet"
-ALERTS_FP = PROCESSED_DIR / "alerts_outbox.json"           # written by services.alerts
-AI_NOTE_FP = PROCESSED_DIR / "ai_recommendations.txt"      # AI Copilot writes here for alerts
+ALERTS_FP = PROCESSED_DIR / "alerts_outbox.json"
+AI_NOTE_FP = PROCESSED_DIR / "ai_recommendations.txt"
 
-# Executables
-ETL_BAT = ROOT / "scripts" / "run_etl.bat"                 # Windows batch script
-PBIX_FILE = ROOT / "dashboards" / "PowerBI" / "MasterControl.pbix"
-
-# Page icon/logo (nice polish for execs)
+# Keep a single stable type (str) for the page icon to satisfy mypy
 logo_path = ROOT / CFG["ui"]["logo_path"]
-if Image and logo_path.exists():
-    try:
-        page_icon = Image.open(logo_path)
-    except Exception:
-        page_icon = "📊"
-else:
-    page_icon = "📊"
+page_icon_for_config: str = str(logo_path) if logo_path.exists() else "📊"
 
 st.set_page_config(
     page_title="Mega-EVM Master Control – What-If Copilot",
-    page_icon=page_icon,
+    page_icon=page_icon_for_config,  # str path or emoji
     layout="wide",
 )
 
-# Light-touch CSS: makes UI look senior-quality without a design system
+# Light CSS polish for executive look
 st.markdown(
     """
 <style>
 .block-container { padding-top: 1rem; padding-bottom: 2rem; }
-.hero {
-  background: linear-gradient(90deg, #0B1F3A 0%, #12345c 100%);
-  border-radius: 14px;
-  padding: 18px 22px;
-  color: #fff;
-  margin-bottom: 10px;
-  box-shadow: 0 6px 16px rgba(0,0,0,0.2);
-}
+.hero { background: linear-gradient(90deg, #0B1F3A 0%, #12345c 100%); border-radius: 14px;
+        padding: 18px 22px; color: #fff; margin-bottom: 10px; box-shadow: 0 6px 16px rgba(0,0,0,0.2); }
 .hero h1 { font-size: 1.5rem; margin: 0; line-height: 1.2; }
 .hero p  { margin: 0.2rem 0 0; opacity: 0.9; }
-
-.kpi-card {
-  border: 1px solid #e8e8e8; border-radius: 12px; padding: 12px 14px;
-  background: #ffffff; box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-}
+.kpi-card { border: 1px solid #e8e8e8; border-radius: 12px; padding: 12px 14px; background: #fff;
+           box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
 .kpi-label { font-size: 0.9rem; color: #666; }
 .kpi-value { font-weight: 700; font-size: 1.2rem; color: #0B1F3A; }
-
 .small-caption { font-size: 0.85rem; color: #cfd8e3; }
-
 .badge { display:inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.75rem; }
 .badge-green { background:#d1fae5; color:#065f46; }
 .badge-red { background:#fee2e2; color:#991b1b; }
@@ -199,11 +157,11 @@ with st.container():
     st.markdown("</div>", unsafe_allow_html=True)
 
 
-# =============================================================================
+# ──────────────────────────────────────────────────────────────────────────────
 # 3) HELPERS (file I/O, subprocess, config persistence)
-# =============================================================================
+# ──────────────────────────────────────────────────────────────────────────────
 def load_parquet(fp: Path) -> Optional[pd.DataFrame]:
-    """Safely read a parquet file; return None if missing or unreadable."""
+    """Safely read a parquet file; return None if missing/unreadable."""
     try:
         return pd.read_parquet(fp) if fp.exists() else None
     except Exception as e:
@@ -225,8 +183,8 @@ def load_text(fp: Path) -> Optional[str]:
 def run_command(cmd: List[str], cwd: Optional[Path] = None) -> Tuple[int, str, str]:
     """
     Run a shell command and return (exit_code, stdout, stderr).
-    • On Windows we use shell=True so .bat works.
-    • cwd lets us run relative to the project root.
+    - On Windows we use shell=True so .bat works.
+    - cwd lets us run relative to the project root.
     """
     result = subprocess.run(
         cmd,
@@ -239,10 +197,7 @@ def run_command(cmd: List[str], cwd: Optional[Path] = None) -> Tuple[int, str, s
 
 
 def open_file_cross_platform(path: Path) -> Tuple[int, str, str]:
-    """
-    Open a file with the OS default app (e.g., .pbix → Power BI).
-    Handy for demos from inside the Streamlit UI.
-    """
+    """Open a file with the OS default app (e.g., .pbix → Power BI)."""
     try:
         if platform.system() == "Windows":
             os.startfile(str(path))  # type: ignore[attr-defined]
@@ -255,9 +210,7 @@ def open_file_cross_platform(path: Path) -> Tuple[int, str, str]:
 
 
 def save_config(cfg: Dict[str, Any], path: Path) -> None:
-    """
-    Persist the in-memory config back to config.yaml (for governance toggles).
-    """
+    """Persist the in-memory config back to config.yaml."""
     with path.open("w", encoding="utf-8") as f:
         yaml.safe_dump(cfg, f, sort_keys=False, indent=2)
 
@@ -267,24 +220,30 @@ def set_cfg(path_keys: List[str], value: Any, cfg: Dict[str, Any]) -> Dict[str, 
     Set cfg['a']['b']... = value, creating dict levels as needed.
     Example: set_cfg(['alerts','dry_run'], True, CFG)
     """
-    node = cfg
+    node: Dict[str, Any] = cfg
     for k in path_keys[:-1]:
         if k not in node or not isinstance(node[k], dict):
             node[k] = {}
-        node = node[k]
+        node = cast(Dict[str, Any], node[k])
     node[path_keys[-1]] = value
     return cfg
 
 
-# =============================================================================
+def _env_nonempty(var_name: str) -> bool:
+    """True if env var exists and is not just whitespace."""
+    val = os.getenv(var_name, "")
+    return bool(val and val.strip())
+
+
+# ──────────────────────────────────────────────────────────────────────────────
 # 4) SIDEBAR: Upload → ETL/MonteCarlo → PowerBI → Governance (writes config)
-# =============================================================================
+# ──────────────────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.header("Controls")
 
-    # ---- Upload CSVs into data/samples for ETL ingestion
+    # Upload CSVs into data/samples for ETL ingestion
     st.subheader("Upload your data (CSV)")
-    st.write("Use these **exact filenames** so ETL picks them up:")
+    st.write("Use these **exact filenames** so ETL will pick them up:")
     st.markdown(
         "- `schedule_activities.csv`\n"
         "- `cost_erp.csv`\n"
@@ -300,7 +259,7 @@ with st.sidebar:
             "procurement.csv",
             "risk_register.csv",
         }
-        saved = []
+        saved: List[str] = []
         for uf in uploaded:
             if uf.name.lower() in allowed:
                 (SAMPLES_DIR / uf.name).write_bytes(uf.getvalue())
@@ -312,15 +271,16 @@ with st.sidebar:
 
     st.divider()
 
-    # ---- Run full ETL (.bat) – parses CSVs → EVM → Procurement → Monte Carlo
+    # Run full ETL (.bat) – parses CSVs → EVM → Procurement → Monte Carlo
     st.subheader("Run ETL (full pipeline)")
     st.caption("Parses CSVs → computes EVM → joins procurement → runs Monte Carlo.")
     if st.button("▶ Run ETL Now", use_container_width=True):
-        if not ETL_BAT.exists():
-            st.error(f"Missing script: {ETL_BAT}")
+        etl_bat = ROOT / "scripts" / "run_etl.bat"
+        if not etl_bat.exists():
+            st.error(f"Missing script: {etl_bat}")
         else:
             with st.spinner("Running ETL…"):
-                code, out, err = run_command([str(ETL_BAT)], cwd=ROOT)
+                code, out, err = run_command([str(etl_bat)], cwd=ROOT)
             if code == 0:
                 st.success("ETL completed. Press Ctrl+F5 to refresh charts.")
             else:
@@ -330,11 +290,10 @@ with st.sidebar:
                 if err:
                     st.code(err)
 
-    # ---- Monte Carlo only – handy for what-if without full ETL
+    # Monte Carlo only – handy for what-if without full ETL
     st.divider()
     st.subheader("Run Monte Carlo only")
-    iters = st.slider("Iterations", min_value=1_000, max_value=50_000,
-                      value=int(CFG["monte_carlo"]["iterations"]), step=1_000)
+    iters = st.slider("Iterations", min_value=1_000, max_value=50_000, value=int(CFG["monte_carlo"]["iterations"]), step=1_000)
     seed = st.number_input("Random seed", min_value=0, value=int(CFG["monte_carlo"]["seed"]), step=1)
     if st.button("🎲 Run Monte Carlo", use_container_width=True):
         with st.spinner("Running Monte Carlo…"):
@@ -357,44 +316,40 @@ with st.sidebar:
             if err:
                 st.code(err)
 
-    # ---- Open Power BI report (if present)
+    # Open Power BI report (if present)
     st.divider()
     st.subheader("Open Power BI")
     st.caption("Launches the executive dashboard pack (.pbix).")
     if st.button("📂 Open MasterControl.pbix", use_container_width=True):
-        if not PBIX_FILE.exists():
-            st.error(f"File not found: {PBIX_FILE}")
+        pbix = ROOT / "dashboards" / "PowerBI" / "MasterControl.pbix"
+        if not pbix.exists():
+            st.error(f"File not found: {pbix}")
         else:
-            code, out, err = open_file_cross_platform(PBIX_FILE)
+            code, out, err = open_file_cross_platform(pbix)
             if code == 0:
                 st.success("Opening Power BI…")
             else:
                 st.error("Could not open Power BI file. See message below.")
                 st.code(err or out or "Unknown error")
 
-    # ---- Status and Governance (writes config.yaml)
+    # Status and Governance (writes config.yaml)
     st.divider()
     st.subheader("Environment & Alerts Status")
 
-    # Read current enablement & dry-run
     dry_run_current = bool(CFG["alerts"].get("dry_run", True))
-    jira_enabled_current = bool(CFG["alerts"].get("jira_enabled", True))
-    slack_enabled_current = bool(CFG["alerts"].get("slack_enabled", True))
-    email_enabled_current = bool(CFG["alerts"].get("email_enabled", True))
-
-    # Visual badge for dry-run
     st.markdown(
         f"Dry-Run: {'<span class=\"badge badge-green\">ON</span>' if dry_run_current else '<span class=\"badge badge-red\">OFF</span>'}",
         unsafe_allow_html=True,
     )
 
-    # Simple check if env vars look configured (non-empty)
-    def configured(var_name: str) -> bool:
-        return len(os.getenv(var_name, "").strip()) > 0
+    # Quick env checks (non-empty)
+    slack_ok = _env_nonempty("SLACK_WEBHOOK_URL")
+    email_ok = all(_env_nonempty(v) for v in ["SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASS", "ALERT_TO"])
+    jira_ok = all(_env_nonempty(v) for v in ["JIRA_API_URL", "JIRA_USER_EMAIL", "JIRA_API_TOKEN", "JIRA_PROJECT_KEY"])
 
-    slack_ok = configured("SLACK_WEBHOOK_URL")
-    email_ok = all(configured(v) for v in ["SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASS", "ALERT_TO"])
-    jira_ok = all(configured(v) for v in ["JIRA_API_URL", "JIRA_USER_EMAIL", "JIRA_API_TOKEN", "JIRA_PROJECT_KEY"])
+    slack_enabled_current = bool(CFG["alerts"].get("slack_enabled", True))
+    email_enabled_current = bool(CFG["alerts"].get("email_enabled", True))
+    jira_enabled_current = bool(CFG["alerts"].get("jira_enabled", True))
 
     st.write(f"Slack Webhook: {'✅' if slack_ok else '⚪'} (enabled: {slack_enabled_current})")
     st.write(f"Email (SMTP): {'✅' if email_ok else '⚪'} (enabled: {email_enabled_current})")
@@ -403,11 +358,13 @@ with st.sidebar:
     st.caption("Tip: Terminal alternative")
     st.code(".\\scripts\\run_etl.bat", language="powershell")
 
-    # ---- Governance toggles → persists to config.yaml then reloads app
+    # Governance toggles → persist to config.yaml then reload
     st.divider()
     st.subheader("Governance (writes config.yaml)")
-    dry_run_toggle = st.toggle("Dry-Run (simulate sends)", value=dry_run_current,
-                               help="ON = safe demo. OFF = real Slack/Email/JIRA (if creds exist).")
+    dry_run_toggle = st.toggle(
+        "Dry-Run (simulate sends)", value=dry_run_current,
+        help="ON = safe demo. OFF = real Slack/Email/JIRA (if creds exist)."
+    )
     jira_toggle = st.toggle("Enable JIRA channel", value=jira_enabled_current)
     slack_toggle = st.toggle("Enable Slack channel", value=slack_enabled_current)
     email_toggle = st.toggle("Enable Email channel", value=email_enabled_current)
@@ -419,12 +376,12 @@ with st.sidebar:
         set_cfg(["alerts", "email_enabled"], bool(email_toggle), CFG)
         save_config(CFG, CFG_PATH)
         st.success("Saved to config.yaml. Reloading app to apply…")
-        st.experimental_rerun()  # reload with new config
+        st.rerun()  # modern Streamlit reload
 
 
-# =============================================================================
-# 5) LOAD DATA FOR TABS (and fail fast if missing)
-# =============================================================================
+# ──────────────────────────────────────────────────────────────────────────────
+# 5) LOAD DATA FOR TABS (fail fast if missing) + type narrowing for mypy
+# ──────────────────────────────────────────────────────────────────────────────
 evm_df = load_parquet(EVM_FP)
 mc_df = load_parquet(MC_SUM_FP)
 proc_df = load_parquet(PROC_FP)
@@ -442,23 +399,26 @@ with st.expander("Loaded data status", expanded=False):
         "alerts_outbox.json": 0 if alerts_text is None else len(alerts_text),
     })
 
-# Guide the user if core files are missing
 if any(x is None for x in (evm_df, mc_df, proc_df)):
     st.warning("Processed files not found. Upload CSVs (optional) and run ETL first.")
     st.stop()
 
+# After st.stop() above, mypy still considers these Optional. Narrow now:
+evm_df = cast(pd.DataFrame, evm_df)
+mc_df = cast(pd.DataFrame, mc_df)
+proc_df = cast(pd.DataFrame, proc_df)
 
-# =============================================================================
+# ──────────────────────────────────────────────────────────────────────────────
 # 6) AI UTILITIES (rule-based fallback + optional LLM)
-# =============================================================================
+# ──────────────────────────────────────────────────────────────────────────────
 def build_portfolio_summary(
     evm: pd.DataFrame, mc: pd.DataFrame, proc: pd.DataFrame, projects: Optional[List[Any]] = None
 ) -> Dict[str, Any]:
     """
     Convert detailed tables into compact JSON for AI:
-    • Latest CPI/SPI/EAC/VAC by WBS, aggregated to portfolio stats.
-    • Monte Carlo P50/P80 per project.
-    • Top late procurement items.
+    - Latest CPI/SPI/EAC/VAC by WBS → portfolio stats
+    - Monte Carlo P50/P80 per project
+    - Top late procurement items
     """
     # Optional project filter
     if projects:
@@ -486,7 +446,7 @@ def build_portfolio_summary(
     red_spi_count = int((latest.get("SPI", 1.0) < spi_thr).sum()) if len(latest) else 0
 
     # Monte Carlo records summarized
-    mc_records = []
+    mc_records: List[Dict[str, float | Any]] = []
     for _, r in mc_f.iterrows():
         mc_records.append({
             "ProjectID": r.get("ProjectID"),
@@ -497,7 +457,7 @@ def build_portfolio_summary(
         })
 
     # Top procurement delays
-    worst_list = []
+    worst_list: List[Dict[str, Any]] = []
     if "DelayDays" in proc_f.columns and len(proc_f):
         worst_list = proc_f.sort_values("DelayDays", ascending=False).head(10).to_dict(orient="records")
 
@@ -514,10 +474,7 @@ def build_portfolio_summary(
 
 
 def rule_based_recs(summary: Dict[str, Any]) -> str:
-    """
-    Deterministic expert guidance (works offline; great for demos).
-    Outputs proactive actions across cost, schedule, procurement, and forecast.
-    """
+    """Deterministic guidance that works offline and is great for demos."""
     port = summary.get("portfolio", {})
     cpi = port.get("cpi_mean") or 1.0
     spi = port.get("spi_mean") or 1.0
@@ -526,7 +483,7 @@ def rule_based_recs(summary: Dict[str, Any]) -> str:
     red_cpi = port.get("red_cpi_count", 0)
     red_spi = port.get("red_spi_count", 0)
 
-    lines = []
+    lines: List[str] = []
     lines.append("**AI Copilot — Proactive Prevention Plan**")
     lines.append("1) **Cost Control**")
     if cpi < cpi_thr or red_cpi > 0:
@@ -567,6 +524,11 @@ def try_llm_then_rules(summary: Dict[str, Any], temperature: float = 0.2) -> Tup
     """
     Try cloud LLMs (OpenAI/Anthropic/Groq) if keys exist; otherwise return rule-based text.
     Returns (text, source_model).
+
+    Implementation notes for mypy:
+    - Use distinct local variable names (openai_resp / anthropic_msg / groq_resp)
+      so mypy never tries to unify different SDK response types.
+    - Do NOT annotate these vars with SDK-specific types; we only read string content.
     """
     prompt = (
         "You are a Principal Project Controls AI. Summarize risks and produce a numbered action plan "
@@ -580,57 +542,71 @@ def try_llm_then_rules(summary: Dict[str, Any], temperature: float = 0.2) -> Tup
     groq_key = os.getenv("GROQ_API_KEY", "").strip()
 
     try:
+        # --- OpenAI path -----------------------------------------------------
         if openai_key:
             from openai import OpenAI
             client = OpenAI(api_key=openai_key)
             model = os.getenv("LLM_MODEL", "gpt-4o-mini")
-            resp = client.chat.completions.create(
-                model=model, temperature=float(temperature),
-                messages=[{"role": "system", "content": "You are a Principal Project Controls AI."},
-                          {"role": "user", "content": prompt}]
+            # untyped local name to avoid SDK cross-type conflicts
+            openai_resp = client.chat.completions.create(
+                model=model,
+                temperature=float(temperature),
+                messages=[
+                    {"role": "system", "content": "You are a Principal Project Controls AI."},
+                    {"role": "user", "content": prompt},
+                ],
             )
-            text = resp.choices[0].message.content.strip()
+            text = (openai_resp.choices[0].message.content or "").strip()
             return text, f"OpenAI ({model})"
+
+        # --- Anthropic path --------------------------------------------------
         if anthropic_key:
             import anthropic
             model = os.getenv("LLM_MODEL", "claude-3-5-sonnet-20240620")
             c = anthropic.Anthropic(api_key=anthropic_key)
-            msg = c.messages.create(
-                model=model, max_tokens=600, temperature=float(temperature),
+            anthropic_msg = c.messages.create(
+                model=model,
+                max_tokens=600,
+                temperature=float(temperature),
                 system="You are a Principal Project Controls AI.",
                 messages=[{"role": "user", "content": prompt}],
             )
-            parts = [p.text for p in msg.content if hasattr(p, "text")]
+            parts = [getattr(p, "text", "") for p in anthropic_msg.content]
             text = "".join(parts).strip()
             return text, f"Anthropic ({model})"
+
+        # --- Groq path -------------------------------------------------------
         if groq_key:
             from groq import Groq
             model = os.getenv("LLM_MODEL", "llama-3.1-70b-versatile")
             g = Groq(api_key=groq_key)
-            resp = g.chat.completions.create(
-                model=model, temperature=float(temperature),
-                messages=[{"role": "system", "content": "You are a Principal Project Controls AI."},
-                          {"role": "user", "content": prompt}]
+            groq_resp = g.chat.completions.create(
+                model=model,
+                temperature=float(temperature),
+                messages=[
+                    {"role": "system", "content": "You are a Principal Project Controls AI."},
+                    {"role": "user", "content": prompt},
+                ],
             )
-            text = resp.choices[0].message.content.strip()
+            text = (groq_resp.choices[0].message.content or "").strip()
             return text, f"Groq ({model})"
+
     except Exception as e:
-        # If a cloud call fails, fall back gracefully
+        # If a cloud call fails, fall back gracefully with rule-based text
         fb = rule_based_recs(summary)
         return f"{fb}\n\n_Provisioned LLM call failed: {e}_", "Rule-based (LLM fallback)"
 
-    # No keys configured → rule-based text
+    # No keys configured → rule-based fallback
     return rule_based_recs(summary), "Rule-based expert system"
 
 
-# =============================================================================
-# 7) MAIN TABS
-# =============================================================================
-tab_kpi, tab_fc, tab_proc, tab_alerts, tab_ai = st.tabs(
-    ["KPIs", "Forecast", "Procurement", "Alerts", "AI Copilot"]
-)
 
-# --- KPIs TAB ----------------------------------------------------------------
+# ──────────────────────────────────────────────────────────────────────────────
+# 7) MAIN TABS
+# ──────────────────────────────────────────────────────────────────────────────
+tab_kpi, tab_fc, tab_proc, tab_alerts, tab_ai = st.tabs(["KPIs", "Forecast", "Procurement", "Alerts", "AI Copilot"])
+
+# --- KPIs TAB ---------------------------------------------------------------
 with tab_kpi:
     st.subheader("Portfolio KPIs (latest per WBS)")
     latest = evm_df.copy()
@@ -667,7 +643,7 @@ with tab_kpi:
     show_cols = [c for c in ["ProjectID", "WBS", "CPI", "SPI", "EAC", "VAC", "BAC", "Period"] if c in latest.columns]
     st.dataframe(latest[show_cols], use_container_width=True)
 
-# --- FORECAST TAB ------------------------------------------------------------
+# --- FORECAST TAB -----------------------------------------------------------
 with tab_fc:
     st.subheader("Forecast (Monte Carlo)")
     proj_ids = sorted(mc_df["ProjectID"].dropna().unique().tolist())
@@ -700,6 +676,7 @@ with tab_fc:
     st.divider()
     # S-curve for EAC (CDF)
     if scurve_df is not None and len(scurve_df):
+        scurve_df = cast(pd.DataFrame, scurve_df)  # narrow Optional for mypy
         sc_proj = scurve_df[(scurve_df["ProjectID"] == selected_proj) & (scurve_df["Metric"] == "EAC")]
         if len(sc_proj):
             fig_sc = px.line(
@@ -718,6 +695,7 @@ with tab_fc:
     st.divider()
     # Histogram: finish days over baseline
     if runs_df is not None and len(runs_df):
+        runs_df = cast(pd.DataFrame, runs_df)  # narrow Optional for mypy
         rproj = runs_df[runs_df["ProjectID"] == selected_proj]
         if len(rproj):
             fig_hist = px.histogram(
@@ -731,36 +709,37 @@ with tab_fc:
     else:
         st.info("Runs file not found (monte_carlo_runs.parquet).")
 
-# --- PROCUREMENT TAB ---------------------------------------------------------
+# --- PROCUREMENT TAB --------------------------------------------------------
 with tab_proc:
     st.subheader("Procurement Impacts")
     show_proc = proc_df.loc[:, [c for c in proc_df.columns if c != "Unnamed: 0"]]
     st.dataframe(show_proc, use_container_width=True)
 
-# --- ALERTS TAB --------------------------------------------------------------
+# --- ALERTS TAB -------------------------------------------------------------
 with tab_alerts:
     st.subheader("Alerts Outbox (dry-run history)")
     if alerts_text:
         try:
-            # Try to pretty-print if it’s JSON
-            if alerts_text.strip().startswith("{") or alerts_text.strip().startswith("["):
-                st.json(json.loads(alerts_text))
+            at = alerts_text.strip()
+            if at.startswith("{") or at.startswith("["):
+                st.json(json.loads(at))  # pretty JSON if possible
             else:
                 st.text(alerts_text)
         except Exception:
             st.text(alerts_text)
     else:
-        st.info("No alerts yet. Generate in AI Copilot tab or via:  \n`python -m services.alerts`")
+        st.info("No alerts yet. Generate in AI Copilot tab or via:\n`python -m services.alerts`")
 
-# --- AI COPILOT TAB ----------------------------------------------------------
+# --- AI COPILOT TAB ---------------------------------------------------------
 with tab_ai:
     st.subheader("AI Copilot — Proactive Recommendations")
     st.caption("Analyzes CPI/SPI, P50/P80, and procurement to suggest actions to prevent overruns and delays.")
 
-    # Optional: choose which projects to analyze
+    # Optional: choose projects to analyze
     plist = sorted(evm_df["ProjectID"].dropna().unique().tolist())
     selected_projects = st.multiselect("Projects to analyze", plist, default=plist)
 
+    # Initialize session state fields
     if "ai_text" not in st.session_state:
         st.session_state.ai_text = ""
         st.session_state.ai_source = "n/a"
