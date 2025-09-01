@@ -1,0 +1,4 @@
+PO,WBS,Vendor,Item,PlannedDelivery,ActualDelivery,LeadTimeDays,Qty,UnitCost
+PO-001,1.2,STEELCO,Steel Beams,2025-07-25,2025-08-05,30,100,1500
+PO-002,1.3,CONC,Concrete,2025-08-20,2025-08-21,5,50,300
+PO-003,1.3,REBARINC,Rebar,2025-08-25,,10,200,100

@@ -1,0 +1,33 @@
+thresholds:
+  cpi_red: 0.90
+  spi_red: 0.85
+  vac_negative: 0.0
+  p80_variance_cost_warn: 0.05
+  p80_variance_days_warn: 10
+paths:
+  samples_dir: data/samples
+  processed_dir: data/processed
+  charts_dir: charts
+monte_carlo:
+  iterations: 5000
+  seed: 42
+  distribution: PERT
+  default_procurement_delay_days: [0, 5, 15]
+  sensitivity: ["spearman", "pearson"]
+ui:
+  logo_path: assets/itcmanagement_group.jpg
+  theme: dark
+scenario:
+  delay_cost_rate_per_day: 15000
+  spi_productivity_sensitivity: 0.5
+  cpi_resource_sensitivity: 0.4
+ai:
+  provider: env:LLM_PROVIDER
+  model: env:LLM_MODEL
+  temperature: 0.2
+  max_tokens: 1200
+alerts:
+  slack_enabled: true
+  email_enabled: true
+  jira_enabled: true
+  dry_run: true

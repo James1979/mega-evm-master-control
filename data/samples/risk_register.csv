@@ -1,0 +1,4 @@
+RiskID,WBS,Title,Category,Probability,CostLow,CostML,CostHigh,SchedDaysLow,SchedDaysML,SchedDaysHigh,Trigger,Owner,Status
+R-001,1.2,Steel Delay,Schedule,0.5,20000,50000,100000,5,10,20,Vendor late,PM,Open
+R-002,1.3,Productivity,Cost,0.4,50000,80000,150000,0,5,10,Low productivity,PM,Open
+R-003,1.1,Weather,Schedule,0.3,10000,30000,60000,2,5,12,Storms,PM,Open

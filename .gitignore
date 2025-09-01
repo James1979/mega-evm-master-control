@@ -1,0 +1,15 @@
+__pycache__/
+.venv/
+.vscode/
+.DS_Store
+Thumbs.db
+data/processed/*
+!data/processed/.gitkeep
+charts/*
+!charts/.gitkeep
+.env
+*.key
+*.pem
+build/
+dist/
+*.egg-info/
