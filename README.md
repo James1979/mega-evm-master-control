@@ -35,15 +35,15 @@ Built for **utilities, infrastructure, and mega-projects**, this project demonst
 
 ```mermaid
 flowchart LR
-  A[Source Systems: Cost, Schedule, Procurement] --> B[ETL (/etl)]
-  B --> C[Processed Data (/data/processed)]
-  C --> D[EVM Core (CPI/SPI/EAC)]
-  D --> E[Monte Carlo (P10/P50/P90)]
+  A[Source Systems: Cost, Schedule, Procurement] --> B[ETL /etl]
+  B --> C[Processed Data /data/processed]
+  C --> D[EVM Core: CPI/SPI/EAC]
+  D --> E[Monte Carlo: P10/P50/P90]
   E --> F[AI Variance Narratives]
-  D --> G[Dashboards (Streamlit)]
+  D --> G[Dashboards: Streamlit]
   E --> G
   F --> G
-  G --> H[Alerts (Email/Slack)]
+  G --> H[Alerts: Email/Slack]
 ```
 
 ```bash
