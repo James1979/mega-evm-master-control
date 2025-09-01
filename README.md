@@ -1,5 +1,10 @@
 # Mega-Infrastructure EVM Master Control System
 
+# Mega-Infrastructure EVM Master Control System
+
+[![Build](https://github.com/James1979/mega-evm-master-control/actions/workflows/ci.yml/badge.svg)](https://github.com/James1979/mega-evm-master-control/actions)
+[![codecov](https://codecov.io/gh/James1979/mega-evm-master-control/branch/main/graph/badge.svg)](https://codecov.io/gh/James1979/mega-evm-master-control)
+
 [![Build](https://img.shields.io/github/actions/workflow/status/James1979/mega-evm-master-control/ci.yml)](./.github/workflows/ci.yml)
 ![Coverage](https://img.shields.io/badge/coverage-90%25-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-blue)
