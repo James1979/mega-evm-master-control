@@ -1,5 +1,6 @@
 
-import argparse, json
+import argparse
+import json
 from pathlib import Path
 import pandas as pd
 import yaml
@@ -14,11 +15,20 @@ def build_alerts(evm: pd.DataFrame, mc: pd.DataFrame, cfg: dict):
     alerts = []
     for (proj, wbs), grp in evm.groupby(["ProjectID","WBS"]):
         row = grp.sort_values("Period").tail(1).iloc[0]
-        cpi = row.get("CPI"); spi = row.get("SPI"); vac = row.get("VAC"); bac=row.get("BAC"); eac=row.get("EAC")
+        cpi = row.get("CPI")
+        spi = row.get("SPI")
+        vac = row.get("VAC")
+        bac = row.get("BAC")
+        eac = row.get("EAC")
+        
         trig = []
-        if pd.notna(cpi) and cpi < th.get("cpi_red", 0.9): trig.append("CPI<0.90")
-        if pd.notna(spi) and spi < th.get("spi_red", 0.85): trig.append("SPI<0.85")
-        if pd.notna(vac) and vac < 0: trig.append("VAC<0")
+        
+        if pd.notna(cpi) and cpi < th.get("cpi_red", 0.9):
+            trig.append("CPI<0.90")
+        if pd.notna(spi) and spi < th.get("spi_red", 0.85):
+            trig.append("SPI<0.85")
+        if pd.notna(vac) and vac < 0:
+            trig.append("VAC<0")
         if trig:
             alerts.append({
                 "ts": datetime.utcnow().isoformat(),

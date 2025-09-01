@@ -1,0 +1,16 @@
+# .coveragerc
+# Purpose: focus coverage reports on back-end logic,
+# ignoring UI scaffolding, init files, and test code.
+
+[run]
+source =
+    .
+omit =
+    */.venv/*
+    tests/*
+    streamlit_app/*
+    __init__.py
+
+[report]
+show_missing = True
+skip_covered = False
