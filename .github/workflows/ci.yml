@@ -1,0 +1,74 @@
+# .github/workflows/ci.yml
+# Purpose: Run lint, type-check, tests with coverage, enforce coverage threshold, and upload to Codecov.
+
+name: CI
+
+on:
+  push:
+    branches: [ main, feat/** ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1) Checkout repo
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 2) Setup Python
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # 3) Cache pip
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements*.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      # 4) Install dependencies
+      - name: Install deps
+        run: |
+          python -m pip install -U pip
+          pip install -r requirements.txt
+          pip install ruff mypy pytest pytest-cov pyarrow fastparquet types-PyYAML
+
+      # 5) Run Ruff lint
+      - name: Ruff (lint)
+        run: ruff check .
+
+      # 6) Run Mypy type check
+      - name: Mypy (type check)
+        run: mypy --ignore-missing-imports .
+
+      # 7) Run tests with coverage threshold
+      - name: Pytest (with coverage XML + threshold)
+        run: |
+          export PYTHONPATH=$PWD
+          pytest --cov=./ --cov-report=xml --cov-report=term-missing --cov-fail-under=80
+
+      # 8) Upload coverage to Codecov
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage.xml
+          flags: unittests
+          disable_search: true
+          fail_ci_if_error: true
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+      # 9) Save coverage artifact
+      - name: Save coverage artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-xml
+          path: coverage.xml
