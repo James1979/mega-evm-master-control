@@ -44,7 +44,7 @@ flowchart LR
   E --> G
   F --> G
   G --> H[Alerts (Email/Slack)]
-
+```
 # 1. Create and activate a virtual environment
 python -m venv .venv          # Create a virtual environment in a folder named .venv
 .\.venv\Scripts\activate      # Windows: Activate the virtual environment
