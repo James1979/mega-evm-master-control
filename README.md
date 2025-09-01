@@ -35,16 +35,18 @@ Built for **utilities, infrastructure, and mega-projects**, this project demonst
 
 ```mermaid
 flowchart LR
-  A[Source Systems: Cost, Schedule, Procurement] --> B[ETL (/etl)]
-  B --> C[Processed Data (/data/processed)]
-  C --> D[EVM Core (CPI/SPI/EAC)]
-  D --> E[Monte Carlo (P10/P50/P90)]
+  A[Source Systems: Cost, Schedule, Procurement] --> B[ETL /etl]
+  B --> C[Processed Data /data/processed]
+  C --> D[EVM Core: CPI/SPI/EAC]
+  D --> E[Monte Carlo: P10/P50/P90]
   E --> F[AI Variance Narratives]
-  D --> G[Dashboards (Streamlit)]
+  D --> G[Dashboards: Streamlit]
   E --> G
   F --> G
-  G --> H[Alerts (Email/Slack)]
+  G --> H[Alerts: Email/Slack]
 ```
+
+```bash
 # 1. Create and activate a virtual environment
 python -m venv .venv          # Create a virtual environment in a folder named .venv
 .\.venv\Scripts\activate      # Windows: Activate the virtual environment
@@ -60,7 +62,7 @@ bash scripts/run_app.sh       # Linux/Mac: Run the app via shell script
 scripts\run_app.bat           # Run the app via batch script
 
 # The dashboard will now be available at: http://localhost:8501
-
+```
 ---
 
 ## 📂 Project Structure
@@ -89,7 +91,7 @@ mega-evm-master-control/
 ├── pytest.ini                   # Pytest config (warnings, verbosity)
 ├── .coveragerc                  # Coverage configuration (ignore UI/tests)
 └── README.md                    # This file
-
+```
 ---
 
 ## ✨ Features
