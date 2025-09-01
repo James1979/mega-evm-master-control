@@ -44,7 +44,10 @@ flowchart LR
   E --> G
   F --> G
   G --> H[Alerts (Email/Slack)]
+
 ```
+
+```bash
 # 1. Create and activate a virtual environment
 python -m venv .venv          # Create a virtual environment in a folder named .venv
 .\.venv\Scripts\activate      # Windows: Activate the virtual environment
@@ -61,6 +64,7 @@ scripts\run_app.bat           # Run the app via batch script
 
 # The dashboard will now be available at: http://localhost:8501
 
+```
 ---
 
 ## 📂 Project Structure
