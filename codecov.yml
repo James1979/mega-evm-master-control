@@ -1,0 +1,10 @@
+# codecov.yml
+# Purpose: require at least 80% overall project coverage in Codecov status.
+
+coverage:
+  status:
+    project:
+      default:
+        target: 0.80     # 🔒 minimum overall coverage required
+        threshold: 1%    # allow tiny fluctuations without failing
+        informational: false  # make this status required (not just info)
