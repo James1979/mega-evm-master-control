@@ -44,7 +44,6 @@ flowchart LR
   E --> G
   F --> G
   G --> H[Alerts (Email/Slack)]
-
 ```
 
 ```bash
@@ -63,7 +62,6 @@ bash scripts/run_app.sh       # Linux/Mac: Run the app via shell script
 scripts\run_app.bat           # Run the app via batch script
 
 # The dashboard will now be available at: http://localhost:8501
-
 ```
 ---
 
@@ -93,7 +91,7 @@ mega-evm-master-control/
 ├── pytest.ini                   # Pytest config (warnings, verbosity)
 ├── .coveragerc                  # Coverage configuration (ignore UI/tests)
 └── README.md                    # This file
-
+```
 ---
 
 ## ✨ Features
