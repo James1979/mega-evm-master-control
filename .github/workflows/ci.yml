@@ -1,16 +1,16 @@
 # .github/workflows/ci.yml
 # CI pipeline with lint, type-check, tests, coverage gate, and Codecov upload.
-# Comments explain what each step does.
+# Each step includes a brief comment so reviewers can follow along.
 
 name: CI
 
 on:
   push:
-    branches: [ main, feat/** ]          # run on main and feature branches
+    branches: [ main, feat/** ]         # Run on main and all feature branches
   pull_request:
-    branches: [ main ]                    # run for PRs targeting main
+    branches: [ main ]                  # Validate PRs targeting main
 
-# Required by some actions (incl. Codecov) to read repo contents
+# Required by some actions (e.g., Codecov) to read repo contents.
 permissions:
   contents: read
 
@@ -19,17 +19,17 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1) Check out your repository
+      # 1) Check out repository code
       - name: Checkout
         uses: actions/checkout@v4
 
-      # 2) Use Python 3.11 (matches your README/tooling)
+      # 2) Set up Python (match your README/tooling)
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      # 3) Cache pip downloads to speed up subsequent runs
+      # 3) Cache pip downloads between runs (faster CI)
       - name: Cache pip
         uses: actions/cache@v4
         with:
@@ -38,7 +38,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
 
-      # 4) Install project deps + dev tools used in CI
+      # 4) Install project deps + QA/tooling used in CI
       - name: Install deps
         run: |
           python -m pip install -U pip
@@ -46,7 +46,7 @@ jobs:
           # QA tools
           pip install ruff mypy pytest pytest-cov pyarrow fastparquet types-PyYAML
 
-      # 5) Lint (fast fail on style issues)
+      # 5) Lint (fail fast on style issues)
       - name: Ruff (lint)
         run: ruff check .
 
@@ -54,35 +54,29 @@ jobs:
       - name: Mypy (type check)
         run: mypy --ignore-missing-imports .
 
-      # 7) Tests with coverage + XML report (needed by Codecov)
-      #    NOTE: coverage gate is set to current baseline (58). Raise this later.
-      # .github/workflows/ci.yml (only the pytest step shown below)
-      # What this does:
-      # - Exports PYTHONPATH so your packages import cleanly
-      # - Sets a realistic coverage floor (75%) based on your current 76%
-      # - Produces coverage.xml for Codecov
-
+      # 7) Tests with coverage:
+      #    - Export PYTHONPATH so packages import from repo root
+      #    - Fail if coverage dips below 80% (you’re at ~84% locally)
+      #    - Produce coverage.xml for Codecov
       - name: Pytest (with coverage XML + baseline gate)
         run: |
-          export PYTHONPATH=$PWD                     # ensure imports from repo root
-          pytest --cov=./ \
-                 --cov-report=xml \
-                 --cov-report=term-missing \
-                 --cov-fail-under=75                # <- raise gate to 75%
+          export PYTHONPATH=$PWD
+          pytest -q --cov=./ \
+                    --cov-report=xml \
+                    --cov-report=term-missing \
+                    --cov-fail-under=80
 
-
-      # 8) Upload coverage to Codecov (now blocking since CODECOV_TOKEN exists)
-      #    - Uses your repo secret: Settings → Secrets and variables → Actions → CODECOV_TOKEN
+      # 8) Upload coverage to Codecov (token set via repo Secret: CODECOV_TOKEN)
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
         with:
-          files: ./coverage.xml           # produced by --cov-report=xml
+          files: ./coverage.xml        # Match the file created above
           flags: unittests
-          disable_search: true            # don’t scan for files; use the path above
-          fail_ci_if_error: true          # make upload required now that token is set
+          disable_search: true         # Don’t scan; use the exact path
+          fail_ci_if_error: true       # Make upload required
           token: ${{ secrets.CODECOV_TOKEN }}
 
-      # 9) Save coverage.xml as an artifact (handy for debugging)
+      # 9) Keep coverage.xml as a build artifact for debugging
       - name: Save coverage artifact
         if: always()
         uses: actions/upload-artifact@v4
