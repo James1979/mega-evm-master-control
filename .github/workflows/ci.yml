@@ -1,5 +1,5 @@
 # .github/workflows/ci.yml
-# CI pipeline with lint, type-check, tests, coverage gate, and Codecov upload.
+# CI pipeline with lint, type-check, tests, coverage gate (90%), and Codecov upload.
 # Each step includes a brief comment so reviewers can follow along.
 
 name: CI
@@ -11,11 +11,10 @@ on:
     branches: [ main ]                  # Validate PRs targeting main
 
 # Required by some actions (e.g., Codecov) to read repo contents.
-# ← allow Codecov to post PR status/comments
+# Allow Codecov to post PR status/comments
 permissions:
   contents: read
   pull-requests: write   
-
 
 jobs:
   build-test:
@@ -41,7 +40,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
 
-      # 4) Install project deps + QA/tooling used in CI
+      # 4) Install project dependencies and QA tooling
       - name: Install deps
         run: |
           python -m pip install -U pip
@@ -57,14 +56,14 @@ jobs:
       - name: Mypy (type check)
         run: mypy --ignore-missing-imports .
 
-            # 7) Run tests with coverage and enforce >= 80%
-      - name: Pytest (with coverage XML + 80% gate)
+      # 7) Run tests with coverage and enforce >= 90%
+      - name: Pytest (with coverage XML + 90% gate)
         run: |
-          export PYTHONPATH=$PWD                               # ensure imports from repo root
-          pytest -q --cov=./ \                                 # run tests + measure coverage
-                    --cov-report=xml \                         # write ./coverage.xml
-                    --cov-report=term-missing \                # print uncovered lines in CI log
-                    --cov-fail-under=80                        # 🔒 fail CI if < 80%
+          export PYTHONPATH=$PWD                               # Ensure imports from repo root
+          pytest -q --cov=./ \
+            --cov-report=xml \
+            --cov-report=term-missing \
+            --cov-fail-under=90                               # 🔒 Fail CI if < 90% coverage
 
           # --- Diagnostics: confirm coverage file exists and show size ---
           test -f coverage.xml || (echo "coverage.xml not found!" && exit 1)
@@ -77,12 +76,12 @@ jobs:
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
         with:
-          files: ./coverage.xml             # exact path we just created
+          files: ./coverage.xml             # Exact path we just created
           flags: unittests
-          disable_search: true              # don't scan; trust the path
-          fail_ci_if_error: true            # fail if upload fails
-          token: ${{ secrets.CODECOV_TOKEN }} # repo secret you created
-          verbose: true                     # 👈 print detailed logs
+          disable_search: true              # Don't scan; trust the path
+          fail_ci_if_error: true            # Fail if upload fails
+          token: ${{ secrets.CODECOV_TOKEN }} # Repo secret you created
+          verbose: true                     # Print detailed logs
 
       # 9) Save coverage.xml as an artifact (handy for debugging)
       - name: Save coverage artifact
