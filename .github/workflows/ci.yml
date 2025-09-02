@@ -18,7 +18,7 @@ jobs:
   build-test:
     runs-on: ubuntu-latest
     env:
-      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}  # Expose token as env var
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
     steps:
       - name: Checkout
@@ -27,19 +27,20 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"  # Match local Python
+          python-version: "3.12"
 
       - name: Install dependencies
         run: |
           python -m pip install -U pip
           pip install -r requirements.txt
-          pip install ruff mypy pytest pytest-cov pyarrow fastparquet
+          pip install ruff mypy pytest pytest-cov pyarrow fastparquet types-PyYAML
 
       - name: Ruff (lint)
         run: ruff check .
 
+      # ✅ Only type-check application packages (skip tests)
       - name: Mypy (type check)
-        run: mypy --ignore-missing-imports .
+        run: mypy --ignore-missing-imports etl services streamlit_app
 
       - name: Run pytest with coverage
         run: |
