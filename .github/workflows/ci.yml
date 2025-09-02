@@ -43,8 +43,11 @@ jobs:
         run: mypy --ignore-missing-imports etl services streamlit_app
 
       - name: Run pytest with coverage
+        env:
+          PYTHONPATH: ${{ github.workspace }}   # <-- makes repo root importable
         run: |
           pytest -q --cov=./ --cov-report=xml --cov-report=term-missing --cov-fail-under=80
+
 
       - name: Upload coverage to Codecov
         if: env.CODECOV_TOKEN != ''
