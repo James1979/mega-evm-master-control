@@ -11,7 +11,7 @@ What this test does:
 
 import runpy
 import sys
-from pathlib import Path
+
 import pandas as pd
 
 
