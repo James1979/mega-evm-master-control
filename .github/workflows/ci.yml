@@ -17,6 +17,9 @@ permissions:
 jobs:
   build-test:
     runs-on: ubuntu-latest
+    env:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}  # Expose token as env var
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -24,21 +27,13 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"   # match local
+          python-version: "3.12"  # Match local Python
 
-      - name: Cache pip
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements*.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-
-      - name: Install deps
+      - name: Install dependencies
         run: |
           python -m pip install -U pip
           pip install -r requirements.txt
-          pip install ruff mypy pytest pytest-cov pyarrow fastparquet types-PyYAML
+          pip install ruff mypy pytest pytest-cov pyarrow fastparquet
 
       - name: Ruff (lint)
         run: ruff check .
@@ -46,20 +41,12 @@ jobs:
       - name: Mypy (type check)
         run: mypy --ignore-missing-imports .
 
-      - name: Pytest (with coverage XML + 80% gate)
-        env:
-          PYTHONPATH: ${{ github.workspace }}
+      - name: Run pytest with coverage
         run: |
           pytest -q --cov=./ --cov-report=xml --cov-report=term-missing --cov-fail-under=80
-          test -f coverage.xml || (echo "coverage.xml not found!" && exit 1)
-          echo "coverage.xml size (bytes):"
-          wc -c coverage.xml || true
-          echo "First 5 lines of coverage.xml:"
-          head -n 5 coverage.xml || true
 
-      # Only attempt Codecov upload if the token exists
       - name: Upload coverage to Codecov
-        if: ${{ secrets.CODECOV_TOKEN != '' }}
+        if: env.CODECOV_TOKEN != ''
         uses: codecov/codecov-action@v4
         with:
           files: ./coverage.xml
@@ -69,7 +56,7 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           verbose: true
 
-      - name: Save coverage artifact
+      - name: Upload coverage artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
