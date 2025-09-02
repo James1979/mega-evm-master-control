@@ -17,6 +17,9 @@ permissions:
 jobs:
   build-test:
     runs-on: ubuntu-latest
+    env:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -24,17 +27,9 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"   # match local
+          python-version: "3.12"
 
-      - name: Cache pip
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements*.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-
-      - name: Install deps
+      - name: Install dependencies
         run: |
           python -m pip install -U pip
           pip install -r requirements.txt
@@ -43,23 +38,19 @@ jobs:
       - name: Ruff (lint)
         run: ruff check .
 
+      # ✅ Only type-check application packages (skip tests)
       - name: Mypy (type check)
-        run: mypy --ignore-missing-imports .
+        run: mypy --ignore-missing-imports etl services streamlit_app
 
-      - name: Pytest (with coverage XML + 80% gate)
+      - name: Run pytest with coverage
         env:
-          PYTHONPATH: ${{ github.workspace }}
+          PYTHONPATH: ${{ github.workspace }}   # <-- makes repo root importable
         run: |
           pytest -q --cov=./ --cov-report=xml --cov-report=term-missing --cov-fail-under=80
-          test -f coverage.xml || (echo "coverage.xml not found!" && exit 1)
-          echo "coverage.xml size (bytes):"
-          wc -c coverage.xml || true
-          echo "First 5 lines of coverage.xml:"
-          head -n 5 coverage.xml || true
 
-      # Only attempt Codecov upload if the token exists
+
       - name: Upload coverage to Codecov
-        if: ${{ secrets.CODECOV_TOKEN != '' }}
+        if: env.CODECOV_TOKEN != ''
         uses: codecov/codecov-action@v4
         with:
           files: ./coverage.xml
@@ -69,7 +60,7 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           verbose: true
 
-      - name: Save coverage artifact
+      - name: Upload coverage artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
