@@ -15,7 +15,7 @@ We validate:
 
 import math
 import pandas as pd
-import pytest
+
 
 # Function under test
 from etl.evm_calculator import compute_metrics  # type: ignore[attr-defined]

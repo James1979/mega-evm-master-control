@@ -12,7 +12,7 @@ What it covers:
 - Preferred: a direct call into a pure function that returns a short narrative string
 - Safe: never touches network; we scrub env vars to disable any cloud calls
 """
-import os
+
 import importlib
 
 

@@ -1,6 +1,6 @@
 from pathlib import Path
 import pandas as pd
-import numpy as np
+
 import etl.monte_carlo as mc  # import module to monkeypatch inside it
 
 from etl.monte_carlo import run
