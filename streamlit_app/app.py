@@ -219,20 +219,29 @@ def run_command(cmd: List[str] | str, cwd: Optional[Path] = None) -> Tuple[int, 
 
 def open_file_cross_platform(path: Path) -> Tuple[int, str, str]:
     """
-    Open a file with the OS default app (e.g., .pbix → Power BI).
-    Bandit note:
-      - os.startfile is Windows-only and unavoidable here.
-      - Marked as safe for intended desktop opener usage.
+    Open a file with the OS default app (e.g., .pbix → Power BI) without using os.startfile.
+    Uses shell=False everywhere (Bandit-safe).
     """
     try:
         if platform.system() == "Windows":
-            os.startfile(str(path))  # nosec B606 - safe intended desktop opener
-            return 0, "Opened via os.startfile", ""
+            # Use 'cmd /c start "" <file>' to delegate to the shell builtin safely.
+            # The empty title ("") avoids issues when the path starts with quotes/spaces.
+            result = subprocess.run(
+                ["cmd", "/c", "start", "", str(path)],
+                cwd=str(path.parent),
+                shell=False,
+                capture_output=True,
+                text=True,
+            )
+            return result.returncode, "Opened via cmd start", result.stderr
+
         if platform.system() == "Darwin":
             return run_command(["open", str(path)])
+
         return run_command(["xdg-open", str(path)])
     except Exception as e:
         return 1, "", str(e)
+
 
 
 
