@@ -122,3 +122,8 @@ mega-evm-master-control/
   - `.coveragerc` and `pytest.ini` for professional workflows
 
 ---
+## Development
+- Install hooks: `pre-commit install`
+- Run checks manually: `pre-commit run --all-files`
+- Type check: `mypy etl services streamlit_app`
+- Security scan: `bandit -r etl services streamlit_app`

@@ -37,9 +37,9 @@ jobs:
           pytest -q --cov=./ --cov-report=term-missing --cov-report=xml --cov-fail-under=80
 
       # 🔒 Security scan ONLY on app code (skip tests)
-      - name: Bandit (security scan on app code)
-        run: |
-          bandit -q -r etl services streamlit_app -x .venv,data,charts,dashboards
+      - name: Bandit (app code only)
+        run: bandit -q -r . -c streamlit_app/bandit.yml
+
 
       - name: pip-audit (vuln scan of requirements)
         run: |
