@@ -1,3 +1,4 @@
+# .pre-commit-config.yaml
 # Code quality & safety checks on every commit.
 # Auto-fixes: whitespace, EOF newline, Ruff, Black.
 # Analysis: mypy (app code only), Bandit (app code only).
@@ -14,8 +15,20 @@ repos:
       - id: check-toml
       - id: end-of-file-fixer
       - id: trailing-whitespace
+
+      # Code/text files -> LF
       - id: mixed-line-ending
+        name: mixed-line-ending (LF for code)
         args: [--fix=lf]
+        files: >
+          ^(etl|services|streamlit_app|tests|docs|\.github)/|
+          \.(py|yml|yaml|toml|md|txt|sh)$
+
+      # Windows scripts -> CRLF
+      - id: mixed-line-ending
+        name: mixed-line-ending (CRLF for Windows scripts)
+        args: [--fix=crlf]
+        files: ^scripts/.*\.(bat|cmd|ps1)$
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.12.12
@@ -29,7 +42,6 @@ repos:
     hooks:
       - id: black
 
-  # ✅ IMPORTANT: pass_filenames: false stops pre-commit from appending every file path.
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v1.17.1
     hooks:
