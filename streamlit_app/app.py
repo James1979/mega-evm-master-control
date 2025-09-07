@@ -336,11 +336,13 @@ with st.sidebar:
     st.divider()
     st.subheader("Environment & Alerts Status")
 
+    # ...existing code...
     dry_run_current = bool(CFG["alerts"].get("dry_run", True))
-    st.markdown(
-        f"Dry-Run: {'<span class=\"badge badge-green\">ON</span>' if dry_run_current else '<span class=\"badge badge-red\">OFF</span>'}",
-        unsafe_allow_html=True,
-    )
+    on_html = '<span class="badge badge-green">ON</span>'
+    off_html = '<span class="badge badge-red">OFF</span>'
+    status_html = on_html if dry_run_current else off_html
+    st.markdown(f"Dry-Run: {status_html}", unsafe_allow_html=True)
+
 
     # Quick env checks (non-empty)
     slack_ok = _env_nonempty("SLACK_WEBHOOK_URL")
