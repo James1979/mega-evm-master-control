@@ -36,12 +36,6 @@ import plotly.express as px
 import streamlit as st
 import yaml
 
-# Pillow is optional; only used for rendering a logo if present
-try:
-    from PIL import Image  # noqa: F401
-except Exception:  # pragma: no cover - optional dependency
-    Image = None  # mypy-safe: keep a single name, type may be None
-
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 1) CONFIG LOADING — merge config.yaml with defaults so missing keys never crash
@@ -146,6 +140,7 @@ with st.container():
     cols = st.columns([1, 7], vertical_alignment="center")
     with cols[0]:
         if logo_path.exists():
+            # NOTE: Streamlit can render image paths directly; Pillow not required.
             st.image(str(logo_path), use_container_width=False)
     with cols[1]:
         st.markdown(
