@@ -1,10 +1,17 @@
 """
 tests/conftest.py
 
-Shared pytest fixtures for sample schedule and cost data. 
-These let us test EVM calculations with small, hard-coded datasets 
+Shared pytest fixtures for sample schedule and cost data.
+These let us test EVM calculations with small, hard-coded datasets
 without requiring real project files.
 """
+# --- Add this block so `import services...` works in tests & CI ---
+import sys
+from pathlib import Path
+_repo_root = Path(__file__).resolve().parents[1]
+if str(_repo_root) not in sys.path:
+    sys.path.insert(0, str(_repo_root))
+# -----------------------------------------------------------------
 
 import pandas as pd
 import pytest
