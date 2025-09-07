@@ -1,0 +1,67 @@
+name: CI Day1
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    env:
+      # Codecov token must be set in repo secrets
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
+          # Tools used in this workflow
+          pip install pytest pytest-cov bandit pip-audit pipdeptree codecov
+
+      - name: Run tests + coverage (xml for Codecov)
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          pytest -q --cov=./ --cov-report=term-missing --cov-report=xml --cov-fail-under=80
+
+      # 🔒 Security scan ONLY on app code (skip tests)
+      - name: Bandit (app code only)
+        run: bandit -q -r . -c streamlit_app/bandit.yml
+
+
+      - name: pip-audit (vuln scan of requirements)
+        run: |
+          if [ -f requirements.txt ]; then pip-audit -r requirements.txt || true; fi
+
+      - name: Generate SBOM
+        run: |
+          pipdeptree --json-tree > sbom.json
+
+      - name: Upload SBOM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: sbom.json
+
+      - name: Upload coverage to Codecov
+        if: env.CODECOV_TOKEN != ''
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage.xml
+          flags: unittests
+          disable_search: true
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
+          verbose: true

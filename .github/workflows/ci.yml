@@ -1,6 +1,6 @@
 # .github/workflows/ci.yml
-# CI pipeline with lint, type-check, tests, coverage gate (90%), and Codecov upload.
-# Each step includes a brief comment so reviewers can follow along.
+# CI: lint, type-check, tests, coverage gate (80%), and Codecov upload.
+# Steps are commented for reviewer clarity.
 
 name: CI
 
@@ -9,6 +9,11 @@ on:
     branches: [ main, feat/** ]
   pull_request:
     branches: [ main ]
+
+# Cancel in-progress runs of the same branch/PR to save CI minutes
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -21,34 +26,56 @@ jobs:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
     steps:
+      # 1) Checkout the repo
       - name: Checkout
         uses: actions/checkout@v4
 
+      # 2) Set up Python (cache pip to speed up)
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: "pip"
 
+      # 3) Install dependencies (runtime + dev tools)
       - name: Install dependencies
         run: |
           python -m pip install -U pip
           pip install -r requirements.txt
-          pip install ruff mypy pytest pytest-cov pyarrow fastparquet types-PyYAML
+          # Dev tools used in CI
+          pip install pre-commit ruff mypy black pytest pytest-cov pyarrow fastparquet types-PyYAML
 
+      # 4) Run the same pre-commit hooks as devs (keeps CI parity with local)
+      - name: Pre-commit (all hooks)
+        run: |
+          pre-commit install
+          pre-commit run --all-files
+
+      # 5) Ruff lint (static checks only)
       - name: Ruff (lint)
         run: ruff check .
 
-      # ✅ Only type-check application packages (skip tests)
+      # 6) Ruff format (check-only; CI should not auto-rewrite files)
+      - name: Ruff format (check)
+        run: ruff format --check .
+
+      # 7) Black (check-only; ensures formatting is committed by devs)
+      - name: Black (check)
+        run: black --check .
+
+      # 8) Mypy (type check app packages only; tests are noisy by design)
       - name: Mypy (type check)
         run: mypy --ignore-missing-imports etl services streamlit_app
 
-      - name: Run pytest with coverage
+      # 9) Tests with coverage (fail if below 80%)
+      - name: Run pytest with coverage (80% min)
         env:
-          PYTHONPATH: ${{ github.workspace }}   # <-- makes repo root importable
+          # Make repo root importable
+          PYTHONPATH: ${{ github.workspace }}
         run: |
           pytest -q --cov=./ --cov-report=xml --cov-report=term-missing --cov-fail-under=80
 
-
+      # 10) Upload coverage to Codecov (if token is set)
       - name: Upload coverage to Codecov
         if: env.CODECOV_TOKEN != ''
         uses: codecov/codecov-action@v4
@@ -60,6 +87,7 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           verbose: true
 
+      # 11) Save coverage XML as a build artifact for easy download
       - name: Upload coverage artifact
         if: always()
         uses: actions/upload-artifact@v4

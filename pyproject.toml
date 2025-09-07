@@ -1,0 +1,86 @@
+[project]
+name = "mega-evm-master-control"
+version = "0.1.0"
+# Project targets Python 3.12+ (matches your venv and tooling below)
+requires-python = ">=3.12"
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Ruff (linter + import sorting)
+# - Enforces general lint rules (E/F) and import sorting (I).
+# - Keeps lines to 120 chars (matches Black).
+# - Ignores long-line rule E501 only inside tests for readability.
+# ──────────────────────────────────────────────────────────────────────────────
+[tool.ruff]
+line-length = 120
+# Use the exact interpreter version you run (py312).
+target-version = "py312"
+
+[tool.ruff.lint]
+# Add import sorting to the default E/F rules
+extend-select = ["I"]
+# Keep tests readable: don't enforce E501 in tests
+per-file-ignores = { "tests/*" = ["E501"] }
+
+[tool.ruff.lint.isort]
+# Tell isort (via Ruff) which packages are first-party so it orders correctly
+known-first-party = ["etl", "services", "streamlit_app"]
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Black (code formatter)
+# - Uses the same 120 line length as Ruff to avoid conflicts.
+# - Skips large/generated or irrelevant dirs.
+# ──────────────────────────────────────────────────────────────────────────────
+[tool.black]
+line-length = 120
+target-version = ["py312"]
+extend-exclude = '''
+(
+  ^/data/
+| ^/charts/
+| ^/dashboards/
+| ^/.venv/
+)
+'''
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Mypy (static type checking)
+# - `ignore_missing_imports` keeps signal high when stub packages are missing.
+# - `warn_unused_ignores` ensures we don't accumulate stale `# type: ignore`.
+# - `cache_dir` speeds up subsequent runs significantly.
+# - Excludes data/artifacts and venv from type-checking.
+# ──────────────────────────────────────────────────────────────────────────────
+[tool.mypy]
+python_version = "3.12"
+ignore_missing_imports = true
+show_error_codes = true
+warn_return_any = true
+no_implicit_optional = true
+disallow_untyped_defs = false
+warn_unused_ignores = true
+pretty = true
+# Skip virtualenv + data/artifacts + tests
+exclude = "(^\\.venv/|^data/|^charts/|^dashboards/|^tests/)"
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Pytest
+# - Runs tests quietly by default (`-q`).
+# - Filters noisy Streamlit warnings that can clutter CI logs.
+# ──────────────────────────────────────────────────────────────────────────────
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+filterwarnings = [
+  "ignore:.*ScriptRunContext.*:UserWarning",
+  "ignore:Please replace `use_container_width`.*:UserWarning",
+]
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Bandit (security scanner)
+# - Scans app/etl/services recursively.
+# - Skips tests and generated dirs to avoid false positives (e.g., asserts).
+# ──────────────────────────────────────────────────────────────────────────────
+[tool.bandit]
+recursive = true
+targets = ["etl", "services", "streamlit_app"]
+exclude_dirs = ["tests", ".venv", "data", "charts", "dashboards"]

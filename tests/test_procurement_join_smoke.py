@@ -45,9 +45,9 @@ def _write_inputs(root: Path) -> None:
             "ProjectID": ["P1", "P1"],
             "WBS": ["W1", "W2"],
             "Item": ["Valve", "Cable"],
-            "Vendor": ["ACME", "ACME"],    # <- add vendor so groupby(['WBS','Vendor']) is valid
-            "Qty": [10, 100],                  # REQUIRED by module
-            "UnitCost": [500.0, 12.5],         # REQUIRED by module
+            "Vendor": ["ACME", "ACME"],  # <- add vendor so groupby(['WBS','Vendor']) is valid
+            "Qty": [10, 100],  # REQUIRED by module
+            "UnitCost": [500.0, 12.5],  # REQUIRED by module
             "PlannedDelivery": [today, today + timedelta(days=5)],
             "ActualDelivery": [today + timedelta(days=3), today + timedelta(days=10)],
         }

@@ -1,0 +1,60 @@
+# Code quality & safety checks on every commit.
+# Auto-fixes: whitespace, EOF newline, Ruff, Black.
+# Analysis: mypy (app code only), Bandit (app code only).
+
+default_language_version:
+  python: python3.12
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-merge-conflict
+      - id: check-yaml
+      - id: check-toml
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: mixed-line-ending
+        args: [--fix=lf]
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.12.12
+    hooks:
+      - id: ruff
+        args: ["--fix"]
+      - id: ruff-format
+
+  - repo: https://github.com/psf/black
+    rev: 25.1.0
+    hooks:
+      - id: black
+
+  # ✅ IMPORTANT: pass_filenames: false stops pre-commit from appending every file path.
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.17.1
+    hooks:
+      - id: mypy
+        name: mypy (app code only)
+        pass_filenames: false
+        args:
+          - etl
+          - services
+          - streamlit_app
+          - --ignore-missing-imports
+        additional_dependencies:
+          - pandas-stubs
+          - types-PyYAML
+
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.8.6
+    hooks:
+      - id: bandit
+        name: bandit (app code only)
+        pass_filenames: false
+        args:
+          - -c
+          - pyproject.toml
+          - -r
+          - etl
+          - services
+          - streamlit_app

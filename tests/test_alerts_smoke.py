@@ -28,7 +28,7 @@ def _write_minimal_evm(processed_dir: Path) -> None:
             "WBS": ["W1", "W2"],
             "Period": ["2025-01-01", "2025-01-01"],
             "BAC": [1000.0, 2000.0],
-            "EV": [700.0, 1400.0],   # low EV -> CPI/SPI below thresholds
+            "EV": [700.0, 1400.0],  # low EV -> CPI/SPI below thresholds
             "AC": [900.0, 1800.0],
             "PV": [1000.0, 2000.0],
             "EAC": [1200.0, 2200.0],
@@ -56,9 +56,7 @@ def _write_minimal_mc_summary(processed_dir: Path) -> None:
             "Finish_P80": [20.0],
         }
     )
-    (processed_dir / "monte_carlo_summary.parquet").write_bytes(
-        summary.to_parquet(index=False) or b""
-    )
+    (processed_dir / "monte_carlo_summary.parquet").write_bytes(summary.to_parquet(index=False) or b"")
 
 
 def _write_minimal_config(root: Path) -> None:

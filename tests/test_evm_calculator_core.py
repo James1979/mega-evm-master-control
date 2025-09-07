@@ -12,6 +12,7 @@ What this test covers:
 """
 
 import math
+
 import pandas as pd
 
 # Import the functions under test.
@@ -71,9 +72,9 @@ def test_compute_metrics_core_kpis() -> None:
     # For each (ProjectID, WBS), take the latest Period row and validate KPI math
     latest = (
         out.assign(Period=pd.to_datetime(out["Period"], errors="coerce"))
-           .sort_values("Period")
-           .groupby(["ProjectID", "WBS"], as_index=False)
-           .tail(1)
+        .sort_values("Period")
+        .groupby(["ProjectID", "WBS"], as_index=False)
+        .tail(1)
     )
 
     for _, row in latest.iterrows():

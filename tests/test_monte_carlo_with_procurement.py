@@ -10,8 +10,11 @@
 from __future__ import annotations
 
 from pathlib import Path
+
 import pandas as pd
+
 from etl.monte_carlo import run  # use the pure function, fast & deterministic
+
 
 def test_monte_carlo_with_procurement_file(tmp_path: Path) -> None:
     processed = tmp_path / "data" / "processed"
@@ -20,9 +23,9 @@ def test_monte_carlo_with_procurement_file(tmp_path: Path) -> None:
     samples.mkdir(parents=True, exist_ok=True)
 
     # Minimal baseline EVM so the simulation has an EAC/BAC base
-    pd.DataFrame(
-        {"ProjectID": ["PX", "PX"], "EAC": [100_000.0, 120_000.0], "BAC": [150_000.0, 150_000.0]}
-    ).to_parquet(processed / "evm_timeseries.parquet", index=False)
+    pd.DataFrame({"ProjectID": ["PX", "PX"], "EAC": [100_000.0, 120_000.0], "BAC": [150_000.0, 150_000.0]}).to_parquet(
+        processed / "evm_timeseries.parquet", index=False
+    )
 
     # Small risk register (numeric coercion happens inside the function)
     pd.DataFrame(

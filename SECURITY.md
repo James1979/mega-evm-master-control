@@ -1,10 +1,10 @@
 # Security Policy
 
-We take security seriously.  
+We take security seriously.
 If you discover a vulnerability, please:
 
-1. **Do NOT open a public GitHub issue with sensitive details.**  
-2. Report privately via email: `22340125+James1979@users.noreply.github.com`  
+1. **Do NOT open a public GitHub issue with sensitive details.**
+2. Report privately via email: `22340125+James1979@users.noreply.github.com`
 3. Include:
    - A clear description of the issue
    - Steps to reproduce

@@ -1,6 +1,6 @@
 # Code of Conduct
 
-We are committed to fostering an inclusive, respectful community.  
+We are committed to fostering an inclusive, respectful community.
 All contributors and maintainers agree to:
 
 - Treat everyone with respect and professionalism

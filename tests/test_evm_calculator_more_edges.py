@@ -10,7 +10,9 @@
 from __future__ import annotations
 
 import pandas as pd
+
 from etl.evm_calculator import compute_metrics
+
 
 def test_compute_metrics_bac_zero_and_multi_period_latest() -> None:
     # Schedule has BAC = 0 → forces fallback path when computing EAC/VAC

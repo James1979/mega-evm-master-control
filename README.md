@@ -8,7 +8,7 @@
 
 **Enterprise-grade EVM + Risk + AI Early Warning and Forecasting for mega-infrastructure (PG&E/Bechtel class).**
 
-This system integrates **cost, schedule, and risk data** to provide real-time **Earned Value Management (EVM)** KPIs, **Monte Carlo simulations** (P10/P50/P90), and **AI-powered variance narratives**.  
+This system integrates **cost, schedule, and risk data** to provide real-time **Earned Value Management (EVM)** KPIs, **Monte Carlo simulations** (P10/P50/P90), and **AI-powered variance narratives**.
 Built for **utilities, infrastructure, and mega-projects**, this project demonstrates enterprise-level quality, security, and DevOps practices.
 
 ---
@@ -26,7 +26,7 @@ Built for **utilities, infrastructure, and mega-projects**, this project demonst
 ---
 
 ## 🔥 Demo
-- **20-sec GIF:** `docs/demo.gif` *(placeholder; add your GIF to this path)*  
+- **20-sec GIF:** `docs/demo.gif` *(placeholder; add your GIF to this path)*
 - **Screenshots:** `docs/img/` *(dashboard, risk heatmap, P-curve)*
 
 ---
@@ -122,3 +122,8 @@ mega-evm-master-control/
   - `.coveragerc` and `pytest.ini` for professional workflows
 
 ---
+## Development
+- Install hooks: `pre-commit install`
+- Run checks manually: `pre-commit run --all-files`
+- Type check: `mypy etl services streamlit_app`
+- Security scan: `bandit -r etl services streamlit_app`

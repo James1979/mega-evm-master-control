@@ -1,0 +1,7 @@
+# bandit.yml
+exclude_dirs:
+  - tests
+  - .venv
+  - venv
+  - data
+  - scripts
