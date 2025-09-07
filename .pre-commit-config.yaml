@@ -7,7 +7,7 @@ default_language_version:
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.6.0
+    rev: v6.0.0
     hooks:
       - id: check-merge-conflict
       - id: check-yaml
@@ -18,20 +18,20 @@ repos:
         args: [--fix=lf]
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.6.9
+    rev: v0.12.12
     hooks:
       - id: ruff
         args: ["--fix"]
       - id: ruff-format
 
   - repo: https://github.com/psf/black
-    rev: 24.8.0
+    rev: 25.1.0
     hooks:
       - id: black
 
   # ✅ IMPORTANT: pass_filenames: false stops pre-commit from appending every file path.
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.11.1
+    rev: v1.17.1
     hooks:
       - id: mypy
         name: mypy (app code only)
@@ -46,7 +46,7 @@ repos:
           - types-PyYAML
 
   - repo: https://github.com/PyCQA/bandit
-    rev: 1.7.9
+    rev: 1.8.6
     hooks:
       - id: bandit
         name: bandit (app code only)
