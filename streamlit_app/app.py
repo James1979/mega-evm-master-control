@@ -25,7 +25,7 @@ from __future__ import annotations
 import json
 import os
 import platform
-import subprocess
+import subprocess  # nosec B404 - used via safe wrapper with shell=False
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, cast
@@ -180,33 +180,60 @@ def load_text(fp: Path) -> Optional[str]:
         return None
 
 
-def run_command(cmd: List[str], cwd: Optional[Path] = None) -> Tuple[int, str, str]:
+def run_command(cmd: List[str] | str, cwd: Optional[Path] = None) -> Tuple[int, str, str]:
     """
-    Run a shell command and return (exit_code, stdout, stderr).
-    - On Windows we use shell=True so .bat works.
-    - cwd lets us run relative to the project root.
+    Run a command safely with shell=False.
+
+    Windows:
+      - If launching a .bat/.cmd directly, wrap with: ['cmd.exe', '/c', <your .bat>, ...]
+        This preserves normal batch behavior without shell=True.
+    POSIX (Linux/macOS):
+      - Run the argv list directly.
+
+    Returns (exit_code, stdout, stderr).
     """
-    result = subprocess.run(
-        cmd,
+    is_windows = platform.system() == "Windows"
+
+    # Normalize the input into a list[str]
+    if isinstance(cmd, str):
+        cmd_list: List[str] = [cmd]
+    else:
+        cmd_list = [str(x) for x in cmd]
+
+    # If first token is a batch/cmd file on Windows, wrap with cmd.exe /c
+    if is_windows and cmd_list:
+        first = cmd_list[0].lower()
+        if first.endswith(".bat") or first.endswith(".cmd"):
+            cmd_list = ["cmd.exe", "/c"] + cmd_list
+
+    proc = subprocess.run(  # nosec B603 - command is constructed, shell=False
+        cmd_list,
         cwd=str(cwd) if cwd else None,
-        shell=True if platform.system() == "Windows" else False,
+        shell=False,            # ✅ never enable shell=True
         capture_output=True,
         text=True,
     )
-    return result.returncode, result.stdout, result.stderr
+    return proc.returncode, proc.stdout, proc.stderr
+
 
 
 def open_file_cross_platform(path: Path) -> Tuple[int, str, str]:
-    """Open a file with the OS default app (e.g., .pbix → Power BI)."""
+    """
+    Open a file with the OS default app (e.g., .pbix → Power BI).
+    Bandit note:
+      - os.startfile is Windows-only and unavoidable here.
+      - Marked as safe for intended desktop opener usage.
+    """
     try:
         if platform.system() == "Windows":
-            os.startfile(str(path))  # type: ignore[attr-defined]
+            os.startfile(str(path))  # nosec B606 - safe intended desktop opener
             return 0, "Opened via os.startfile", ""
         if platform.system() == "Darwin":
             return run_command(["open", str(path)])
         return run_command(["xdg-open", str(path)])
     except Exception as e:
         return 1, "", str(e)
+
 
 
 def save_config(cfg: Dict[str, Any], path: Path) -> None:
