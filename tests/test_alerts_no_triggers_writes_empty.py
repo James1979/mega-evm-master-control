@@ -19,7 +19,9 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+
 import pandas as pd
+
 from services.alerts import main as alerts_main  # type: ignore
 
 
@@ -45,10 +47,10 @@ def test_alerts_main_writes_summary_when_no_triggers(tmp_path: Path) -> None:
             "ProjectID": ["G1"],
             "WBS": ["W1"],
             "Period": pd.to_datetime(["2025-01-01"]),
-            "CPI": [1.05],        # > 0.9
-            "SPI": [1.02],        # > 0.85
+            "CPI": [1.05],  # > 0.9
+            "SPI": [1.02],  # > 0.85
             "EAC": [100_000.0],
-            "VAC": [5_000.0],     # >= 0
+            "VAC": [5_000.0],  # >= 0
             "BAC": [95_000.0],
         }
     ).to_parquet(processed / "evm_timeseries.parquet", index=False)
@@ -61,11 +63,7 @@ def test_alerts_main_writes_summary_when_no_triggers(tmp_path: Path) -> None:
     # Dry-run config: no external sends
     cfg = tmp_path / "config.yaml"
     cfg.write_text(
-        "alerts:\n"
-        "  slack_enabled: false\n"
-        "  email_enabled: false\n"
-        "  jira_enabled: false\n"
-        "  dry_run: true\n",
+        "alerts:\n  slack_enabled: false\n  email_enabled: false\n  jira_enabled: false\n  dry_run: true\n",
         encoding="utf-8",
     )
 

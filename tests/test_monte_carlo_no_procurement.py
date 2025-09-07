@@ -16,8 +16,11 @@
 from __future__ import annotations
 
 from pathlib import Path
+
 import pandas as pd
+
 from etl.monte_carlo import run  # uses the pure function; no CLI
+
 
 def test_monte_carlo_fallback_when_no_procurement(tmp_path: Path) -> None:
     processed = tmp_path / "data" / "processed"
@@ -26,9 +29,9 @@ def test_monte_carlo_fallback_when_no_procurement(tmp_path: Path) -> None:
     samples.mkdir(parents=True, exist_ok=True)
 
     # Minimal evm_timeseries with EAC/BAC so base frame exists
-    pd.DataFrame(
-        {"ProjectID": ["P1", "P1"], "EAC": [100000.0, 120000.0], "BAC": [150000.0, 150000.0]}
-    ).to_parquet(processed / "evm_timeseries.parquet", index=False)
+    pd.DataFrame({"ProjectID": ["P1", "P1"], "EAC": [100000.0, 120000.0], "BAC": [150000.0, 150000.0]}).to_parquet(
+        processed / "evm_timeseries.parquet", index=False
+    )
 
     # Tiny risk register — columns will be coerced numeric inside the function
     pd.DataFrame(

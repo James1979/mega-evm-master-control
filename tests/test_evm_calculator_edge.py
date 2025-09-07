@@ -12,7 +12,9 @@ What this tests:
 """
 
 import math
+
 import pandas as pd
+
 from etl.evm_calculator import compute_metrics
 
 
@@ -44,8 +46,8 @@ def test_compute_metrics_coerces_stringy_numbers_and_handles_missing() -> None:
             "ProjectID": ["P1", "P1", "P1"],
             "WBS": ["W1", "W2", "W2"],
             "Period": ["2025-01", "2025-01", "2025-02"],
-            "ActualCost": ["400", "", None],   # coercion path
-            "Budget": ["500", "100", ""],      # coercion path
+            "ActualCost": ["400", "", None],  # coercion path
+            "Budget": ["500", "100", ""],  # coercion path
         }
     )
 
@@ -57,9 +59,9 @@ def test_compute_metrics_coerces_stringy_numbers_and_handles_missing() -> None:
     # Validate KPI math on most recent row per WBS
     latest = (
         out.assign(Period=pd.to_datetime(out["Period"], errors="coerce"))
-           .sort_values("Period")
-           .groupby(["ProjectID", "WBS"], as_index=False)
-           .tail(1)
+        .sort_values("Period")
+        .groupby(["ProjectID", "WBS"], as_index=False)
+        .tail(1)
     )
 
     for _, row in latest.iterrows():

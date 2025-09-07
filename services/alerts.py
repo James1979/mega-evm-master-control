@@ -12,7 +12,7 @@ import argparse
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Any
+from typing import Any, Dict, List
 
 import pandas as pd
 import yaml
@@ -85,7 +85,7 @@ def _build_summary_alert(proj_id: str, mc_row: Dict[str, Any]) -> Dict:
 
     return {
         "ts": datetime.utcnow().isoformat(),
-        "project_id": str(proj_id),   # <- use group key, not the row dict (which lacks ProjectID)
+        "project_id": str(proj_id),  # <- use group key, not the row dict (which lacks ProjectID)
         "wbs": None,
         # no 'trigger'
         "kpis": {

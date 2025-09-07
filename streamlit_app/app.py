@@ -40,13 +40,14 @@ import yaml
 try:
     from PIL import Image  # noqa: F401
 except Exception:  # pragma: no cover - optional dependency
-    Image = None  # type: ignore[assignment]
+    Image = None  # mypy-safe: keep a single name, type may be None
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# 1) CONFIG LOADING  — merge config.yaml with defaults so missing keys never crash
+# 1) CONFIG LOADING — merge config.yaml with defaults so missing keys never crash
 # ──────────────────────────────────────────────────────────────────────────────
 def load_config(cfg_path: Path) -> Dict[str, Any]:
+    """Return a config dict: defaults overlaid with user config.yaml if present."""
     defaults: Dict[str, Any] = {
         "thresholds": {
             "cpi_red": 0.90,
@@ -89,7 +90,7 @@ def load_config(cfg_path: Path) -> Dict[str, Any]:
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# 2) PATHS & PAGE SETUP  — constants and page config (icon is a string path)
+# 2) PATHS & PAGE SETUP — constants and page config (icon is a string path)
 # ──────────────────────────────────────────────────────────────────────────────
 ROOT = Path(__file__).resolve().parents[1]
 CFG_PATH = ROOT / "config.yaml"
@@ -117,7 +118,7 @@ st.set_page_config(
     layout="wide",
 )
 
-# Light CSS polish for executive look
+# Basic CSS for a clean executive look
 st.markdown(
     """
 <style>
@@ -158,7 +159,7 @@ with st.container():
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# 3) HELPERS (file I/O, subprocess, config persistence)
+# 3) HELPERS — file I/O, subprocess, config persistence
 # ──────────────────────────────────────────────────────────────────────────────
 def load_parquet(fp: Path) -> Optional[pd.DataFrame]:
     """Safely read a parquet file; return None if missing/unreadable."""
@@ -170,7 +171,7 @@ def load_parquet(fp: Path) -> Optional[pd.DataFrame]:
 
 
 def load_text(fp: Path) -> Optional[str]:
-    """Read a text/JSON file into a string; return None if missing."""
+    """Read a text/JSON file into a string; return None if missing or unreadable."""
     if not fp.exists():
         return None
     try:
@@ -182,14 +183,7 @@ def load_text(fp: Path) -> Optional[str]:
 
 def run_command(cmd: List[str] | str, cwd: Optional[Path] = None) -> Tuple[int, str, str]:
     """
-    Run a command safely with shell=False.
-
-    Windows:
-      - If launching a .bat/.cmd directly, wrap with: ['cmd.exe', '/c', <your .bat>, ...]
-        This preserves normal batch behavior without shell=True.
-    POSIX (Linux/macOS):
-      - Run the argv list directly.
-
+    Run a command safely with shell=False across platforms.
     Returns (exit_code, stdout, stderr).
     """
     is_windows = platform.system() == "Windows"
@@ -200,7 +194,7 @@ def run_command(cmd: List[str] | str, cwd: Optional[Path] = None) -> Tuple[int, 
     else:
         cmd_list = [str(x) for x in cmd]
 
-    # If first token is a batch/cmd file on Windows, wrap with cmd.exe /c
+    # If first token is a .bat/.cmd on Windows, wrap with cmd.exe /c (no shell=True)
     if is_windows and cmd_list:
         first = cmd_list[0].lower()
         if first.endswith(".bat") or first.endswith(".cmd"):
@@ -209,26 +203,26 @@ def run_command(cmd: List[str] | str, cwd: Optional[Path] = None) -> Tuple[int, 
     proc = subprocess.run(  # nosec B603 - command is constructed, shell=False
         cmd_list,
         cwd=str(cwd) if cwd else None,
-        shell=False,            # ✅ never enable shell=True
+        shell=False,  # ✅ never enable shell=True
         capture_output=True,
         text=True,
     )
     return proc.returncode, proc.stdout, proc.stderr
 
 
-
 def open_file_cross_platform(path: Path) -> Tuple[int, str, str]:
-    """
-    Open a file with the OS default app (e.g., .pbix → Power BI) without using os.startfile.
-    Uses shell=False everywhere (Bandit-safe).
-    """
+    """Open a file with the OS default app (e.g., .pbix → Power BI) in a safe way."""
     try:
         if platform.system() == "Windows":
-            # Use 'cmd /c start "" <file>' to delegate to the shell builtin safely.
-            # The empty title ("") avoids issues when the path starts with quotes/spaces.
-            result = subprocess.run(
-                ["cmd", "/c", "start", "", str(path)],
-                cwd=str(path.parent),
+            comspec = os.environ.get("COMSPEC") or r"C:\Windows\System32\cmd.exe"
+            p = path.resolve()
+            if not p.exists():
+                return 1, "", f"Not found: {p}"
+            if not p.is_file():
+                return 1, "", f"Not a file: {p}"
+            result = subprocess.run(  # nosec B603 - fixed command, validated local path
+                [comspec, "/c", "start", "", str(p)],
+                cwd=str(p.parent),
                 shell=False,
                 capture_output=True,
                 text=True,
@@ -243,8 +237,6 @@ def open_file_cross_platform(path: Path) -> Tuple[int, str, str]:
         return 1, "", str(e)
 
 
-
-
 def save_config(cfg: Dict[str, Any], path: Path) -> None:
     """Persist the in-memory config back to config.yaml."""
     with path.open("w", encoding="utf-8") as f:
@@ -253,8 +245,8 @@ def save_config(cfg: Dict[str, Any], path: Path) -> None:
 
 def set_cfg(path_keys: List[str], value: Any, cfg: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Set cfg['a']['b']... = value, creating dict levels as needed.
-    Example: set_cfg(['alerts','dry_run'], True, CFG)
+    Set nested config values (e.g., set_cfg(['alerts','dry_run'], True, CFG)).
+    Creates intermediate dicts as needed.
     """
     node: Dict[str, Any] = cfg
     for k in path_keys[:-1]:
@@ -272,7 +264,7 @@ def _env_nonempty(var_name: str) -> bool:
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# 4) SIDEBAR: Upload → ETL/MonteCarlo → PowerBI → Governance (writes config)
+# 4) SIDEBAR — Upload → ETL/MonteCarlo → PowerBI → Governance (writes config)
 # ──────────────────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.header("Controls")
@@ -280,12 +272,7 @@ with st.sidebar:
     # Upload CSVs into data/samples for ETL ingestion
     st.subheader("Upload your data (CSV)")
     st.write("Use these **exact filenames** so ETL will pick them up:")
-    st.markdown(
-        "- `schedule_activities.csv`\n"
-        "- `cost_erp.csv`\n"
-        "- `procurement.csv`\n"
-        "- `risk_register.csv`"
-    )
+    st.markdown("- `schedule_activities.csv`\n- `cost_erp.csv`\n- `procurement.csv`\n- `risk_register.csv`")
     uploaded = st.file_uploader("Upload CSV files", type=["csv"], accept_multiple_files=True)
     if uploaded:
         SAMPLES_DIR.mkdir(parents=True, exist_ok=True)
@@ -329,18 +316,27 @@ with st.sidebar:
     # Monte Carlo only – handy for what-if without full ETL
     st.divider()
     st.subheader("Run Monte Carlo only")
-    iters = st.slider("Iterations", min_value=1_000, max_value=50_000, value=int(CFG["monte_carlo"]["iterations"]), step=1_000)
+    iters = st.slider(
+        "Iterations", min_value=1_000, max_value=50_000, value=int(CFG["monte_carlo"]["iterations"]), step=1_000
+    )
     seed = st.number_input("Random seed", min_value=0, value=int(CFG["monte_carlo"]["seed"]), step=1)
     if st.button("🎲 Run Monte Carlo", use_container_width=True):
         with st.spinner("Running Monte Carlo…"):
             python = sys.executable
             cmd = [
-                python, "-m", "etl.monte_carlo",
-                "--iters", str(iters),
-                "--seed", str(seed),
-                "--processed", str(PROCESSED_DIR),
-                "--samples", str(SAMPLES_DIR),
-                "--outdir", str(PROCESSED_DIR),
+                python,
+                "-m",
+                "etl.monte_carlo",
+                "--iters",
+                str(iters),
+                "--seed",
+                str(seed),
+                "--processed",
+                str(PROCESSED_DIR),
+                "--samples",
+                str(SAMPLES_DIR),
+                "--outdir",
+                str(PROCESSED_DIR),
             ]
             code, out, err = run_command(cmd, cwd=ROOT)
         if code == 0:
@@ -372,13 +368,11 @@ with st.sidebar:
     st.divider()
     st.subheader("Environment & Alerts Status")
 
-    # ...existing code...
     dry_run_current = bool(CFG["alerts"].get("dry_run", True))
     on_html = '<span class="badge badge-green">ON</span>'
     off_html = '<span class="badge badge-red">OFF</span>'
     status_html = on_html if dry_run_current else off_html
     st.markdown(f"Dry-Run: {status_html}", unsafe_allow_html=True)
-
 
     # Quick env checks (non-empty)
     slack_ok = _env_nonempty("SLACK_WEBHOOK_URL")
@@ -400,8 +394,9 @@ with st.sidebar:
     st.divider()
     st.subheader("Governance (writes config.yaml)")
     dry_run_toggle = st.toggle(
-        "Dry-Run (simulate sends)", value=dry_run_current,
-        help="ON = safe demo. OFF = real Slack/Email/JIRA (if creds exist)."
+        "Dry-Run (simulate sends)",
+        value=dry_run_current,
+        help="ON = safe demo. OFF = real Slack/Email/JIRA (if creds exist).",
     )
     jira_toggle = st.toggle("Enable JIRA channel", value=jira_enabled_current)
     slack_toggle = st.toggle("Enable Slack channel", value=slack_enabled_current)
@@ -418,7 +413,7 @@ with st.sidebar:
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# 5) LOAD DATA FOR TABS (fail fast if missing) + type narrowing for mypy
+# 5) LOAD DATA FOR TABS — fail fast if missing + type narrowing for mypy
 # ──────────────────────────────────────────────────────────────────────────────
 evm_df = load_parquet(EVM_FP)
 mc_df = load_parquet(MC_SUM_FP)
@@ -428,14 +423,16 @@ scurve_df = load_parquet(SCURVE_FP)
 alerts_text = load_text(ALERTS_FP)
 
 with st.expander("Loaded data status", expanded=False):
-    st.write({
-        "evm_timeseries.parquet": 0 if evm_df is None else len(evm_df),
-        "monte_carlo_summary.parquet": 0 if mc_df is None else len(mc_df),
-        "procurement_impacts.parquet": 0 if proc_df is None else len(proc_df),
-        "monte_carlo_runs.parquet": 0 if runs_df is None else len(runs_df),
-        "forecast_s_curves.parquet": 0 if scurve_df is None else len(scurve_df),
-        "alerts_outbox.json": 0 if alerts_text is None else len(alerts_text),
-    })
+    st.write(
+        {
+            "evm_timeseries.parquet": 0 if evm_df is None else len(evm_df),
+            "monte_carlo_summary.parquet": 0 if mc_df is None else len(mc_df),
+            "procurement_impacts.parquet": 0 if proc_df is None else len(proc_df),
+            "monte_carlo_runs.parquet": 0 if runs_df is None else len(runs_df),
+            "forecast_s_curves.parquet": 0 if scurve_df is None else len(scurve_df),
+            "alerts_outbox.json": 0 if alerts_text is None else len(alerts_text),
+        }
+    )
 
 if any(x is None for x in (evm_df, mc_df, proc_df)):
     st.warning("Processed files not found. Upload CSVs (optional) and run ETL first.")
@@ -446,8 +443,9 @@ evm_df = cast(pd.DataFrame, evm_df)
 mc_df = cast(pd.DataFrame, mc_df)
 proc_df = cast(pd.DataFrame, proc_df)
 
+
 # ──────────────────────────────────────────────────────────────────────────────
-# 6) AI UTILITIES (rule-based fallback + optional LLM)
+# 6) AI UTILITIES — rule-based fallback + optional LLM
 # ──────────────────────────────────────────────────────────────────────────────
 def build_portfolio_summary(
     evm: pd.DataFrame, mc: pd.DataFrame, proc: pd.DataFrame, projects: Optional[List[Any]] = None
@@ -477,34 +475,43 @@ def build_portfolio_summary(
     eac_total = float(latest["EAC"].sum()) if "EAC" in latest.columns and len(latest) else None
     vac_total = float(latest["VAC"].sum()) if "VAC" in latest.columns and len(latest) else None
 
-    # Red flags by thresholds
+    # Red flags by thresholds — mypy-safe (Series.sum only when column exists)
     cpi_thr = float(CFG["thresholds"]["cpi_red"])
     spi_thr = float(CFG["thresholds"]["spi_red"])
-    red_cpi_count = int((latest.get("CPI", 1.0) < cpi_thr).sum()) if len(latest) else 0
-    red_spi_count = int((latest.get("SPI", 1.0) < spi_thr).sum()) if len(latest) else 0
+    red_cpi_count = int((latest["CPI"] < cpi_thr).sum()) if "CPI" in latest.columns else 0
+    red_spi_count = int((latest["SPI"] < spi_thr).sum()) if "SPI" in latest.columns else 0
 
     # Monte Carlo records summarized
     mc_records: List[Dict[str, float | Any]] = []
     for _, r in mc_f.iterrows():
-        mc_records.append({
-            "ProjectID": r.get("ProjectID"),
-            "EAC_P50": float(r.get("EAC_P50", 0.0)),
-            "EAC_P80": float(r.get("EAC_P80", 0.0)),
-            "Finish_P50": float(r.get("Finish_P50", 0.0)),
-            "Finish_P80": float(r.get("Finish_P80", 0.0)),
-        })
+        mc_records.append(
+            {
+                "ProjectID": r.get("ProjectID"),
+                "EAC_P50": float(r.get("EAC_P50", 0.0)),
+                "EAC_P80": float(r.get("EAC_P80", 0.0)),
+                "Finish_P50": float(r.get("Finish_P50", 0.0)),
+                "Finish_P80": float(r.get("Finish_P80", 0.0)),
+            }
+        )
 
-    # Top procurement delays
+    # Top procurement delays — cast to precise type for mypy
     worst_list: List[Dict[str, Any]] = []
     if "DelayDays" in proc_f.columns and len(proc_f):
-        worst_list = proc_f.sort_values("DelayDays", ascending=False).head(10).to_dict(orient="records")
+        worst_list = cast(
+            List[Dict[str, Any]],
+            proc_f.sort_values("DelayDays", ascending=False).head(10).to_dict(orient="records"),
+        )
 
     return {
         "portfolio": {
-            "cpi_mean": cpi_mean, "spi_mean": spi_mean,
-            "eac_total": eac_total, "vac_total": vac_total,
-            "red_cpi_count": red_cpi_count, "red_spi_count": red_spi_count,
-            "cpi_threshold": cpi_thr, "spi_threshold": spi_thr,
+            "cpi_mean": cpi_mean,
+            "spi_mean": spi_mean,
+            "eac_total": eac_total,
+            "vac_total": vac_total,
+            "red_cpi_count": red_cpi_count,
+            "red_spi_count": red_spi_count,
+            "cpi_threshold": cpi_thr,
+            "spi_threshold": spi_thr,
         },
         "monte_carlo": mc_records,
         "procurement_top_delays": worst_list,
@@ -525,14 +532,18 @@ def rule_based_recs(summary: Dict[str, Any]) -> str:
     lines.append("**AI Copilot — Proactive Prevention Plan**")
     lines.append("1) **Cost Control**")
     if cpi < cpi_thr or red_cpi > 0:
-        lines.append(f"   • CPI < {cpi_thr:.2f}. Freeze non-critical scope on red WBS; run bottom-up ETC; use EAC=AC+ETC on reds.")
+        lines.append(
+            f"   • CPI < {cpi_thr:.2f}. Freeze non-critical scope on red WBS; run bottom-up ETC; use EAC=AC+ETC on reds."
+        )
         lines.append("   • Tighten change control & value engineering; stage-gate POs > $250k.")
     else:
         lines.append("   • CPI within target. Continue weekly RCA and burn-rate monitoring.")
 
     lines.append("2) **Schedule Recovery**")
     if spi < spi_thr or red_spi > 0:
-        lines.append(f"   • SPI < {spi_thr:.2f}. Crash/fast-track critical path; OT/weekend shifts with best crash ratio.")
+        lines.append(
+            f"   • SPI < {spi_thr:.2f}. Crash/fast-track critical path; OT/weekend shifts with best crash ratio."
+        )
         lines.append("   • Resequence near-critical paths; expedite critical materials.")
     else:
         lines.append("   • SPI acceptable. Maintain rolling-wave updates and float monitoring.")
@@ -545,8 +556,11 @@ def rule_based_recs(summary: Dict[str, Any]) -> str:
         lines.append("   • On-time vendors. Keep scorecards and SLAs enforced.")
 
     mc = summary.get("monte_carlo", [])
-    risky = [m for m in mc if m.get("EAC_P80", 0) > 1.05 * m.get("EAC_P50", 0)
-             or m.get("Finish_P80", 0) > m.get("Finish_P50", 0) + 10]
+    risky = [
+        m
+        for m in mc
+        if m.get("EAC_P80", 0) > 1.05 * m.get("EAC_P50", 0) or m.get("Finish_P80", 0) > m.get("Finish_P50", 0) + 10
+    ]
     lines.append("4) **Forecasting Discipline**")
     if risky:
         lines.append("   • Where P80 ≫ P50, brief execs on **P80**; fund mitigations from contingency.")
@@ -562,11 +576,6 @@ def try_llm_then_rules(summary: Dict[str, Any], temperature: float = 0.2) -> Tup
     """
     Try cloud LLMs (OpenAI/Anthropic/Groq) if keys exist; otherwise return rule-based text.
     Returns (text, source_model).
-
-    Implementation notes for mypy:
-    - Use distinct local variable names (openai_resp / anthropic_msg / groq_resp)
-      so mypy never tries to unify different SDK response types.
-    - Do NOT annotate these vars with SDK-specific types; we only read string content.
     """
     prompt = (
         "You are a Principal Project Controls AI. Summarize risks and produce a numbered action plan "
@@ -583,9 +592,9 @@ def try_llm_then_rules(summary: Dict[str, Any], temperature: float = 0.2) -> Tup
         # --- OpenAI path -----------------------------------------------------
         if openai_key:
             from openai import OpenAI
+
             client = OpenAI(api_key=openai_key)
             model = os.getenv("LLM_MODEL", "gpt-4o-mini")
-            # untyped local name to avoid SDK cross-type conflicts
             openai_resp = client.chat.completions.create(
                 model=model,
                 temperature=float(temperature),
@@ -600,6 +609,7 @@ def try_llm_then_rules(summary: Dict[str, Any], temperature: float = 0.2) -> Tup
         # --- Anthropic path --------------------------------------------------
         if anthropic_key:
             import anthropic
+
             model = os.getenv("LLM_MODEL", "claude-3-5-sonnet-20240620")
             c = anthropic.Anthropic(api_key=anthropic_key)
             anthropic_msg = c.messages.create(
@@ -616,6 +626,7 @@ def try_llm_then_rules(summary: Dict[str, Any], temperature: float = 0.2) -> Tup
         # --- Groq path -------------------------------------------------------
         if groq_key:
             from groq import Groq
+
             model = os.getenv("LLM_MODEL", "llama-3.1-70b-versatile")
             g = Groq(api_key=groq_key)
             groq_resp = g.chat.completions.create(
@@ -630,7 +641,7 @@ def try_llm_then_rules(summary: Dict[str, Any], temperature: float = 0.2) -> Tup
             return text, f"Groq ({model})"
 
     except Exception as e:
-        # If a cloud call fails, fall back gracefully with rule-based text
+        # If any cloud call fails, fall back gracefully with rule-based text
         fb = rule_based_recs(summary)
         return f"{fb}\n\n_Provisioned LLM call failed: {e}_", "Rule-based (LLM fallback)"
 
@@ -638,9 +649,8 @@ def try_llm_then_rules(summary: Dict[str, Any], temperature: float = 0.2) -> Tup
     return rule_based_recs(summary), "Rule-based expert system"
 
 
-
 # ──────────────────────────────────────────────────────────────────────────────
-# 7) MAIN TABS
+# 7) MAIN TABS — KPIs, Forecast, Procurement, Alerts, AI Copilot
 # ──────────────────────────────────────────────────────────────────────────────
 tab_kpi, tab_fc, tab_proc, tab_alerts, tab_ai = st.tabs(["KPIs", "Forecast", "Procurement", "Alerts", "AI Copilot"])
 
@@ -719,7 +729,8 @@ with tab_fc:
         if len(sc_proj):
             fig_sc = px.line(
                 sc_proj.sort_values("Value"),
-                x="Value", y="CDF",
+                x="Value",
+                y="CDF",
                 title=f"EAC S-curve (CDF) — {selected_proj}",
                 labels={"Value": "EAC ($)", "CDF": "Cumulative Probability"},
             )
@@ -737,7 +748,9 @@ with tab_fc:
         rproj = runs_df[runs_df["ProjectID"] == selected_proj]
         if len(rproj):
             fig_hist = px.histogram(
-                rproj, x="FinishDaysOverBaseline", nbins=30,
+                rproj,
+                x="FinishDaysOverBaseline",
+                nbins=30,
                 title=f"Finish Days over Baseline — Distribution — {selected_proj}",
                 labels={"FinishDaysOverBaseline": "Days over baseline"},
             )

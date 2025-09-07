@@ -5,7 +5,7 @@ Tiny, fast smoke test for the Monte Carlo engine with schema + sanity checks.
 This version clears sys.modules to avoid the runpy RuntimeWarning.
 """
 
-import runpy            # Execute a module as if via `python -m`
+import runpy  # Execute a module as if via `python -m`
 import sys
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -70,11 +70,16 @@ def test_monte_carlo_cli_runs_inprocess(tmp_path: Path, monkeypatch) -> None:
     # Arrange: CLI argv for argparse in __main__
     argv = [
         "etl.monte_carlo",
-        "--iters", "50",
-        "--seed", "42",
-        "--processed", str(processed),
-        "--samples", str(samples),
-        "--outdir", str(outdir),
+        "--iters",
+        "50",
+        "--seed",
+        "42",
+        "--processed",
+        str(processed),
+        "--samples",
+        str(samples),
+        "--outdir",
+        str(outdir),
     ]
     monkeypatch.setattr(sys, "argv", argv, raising=True)
 
@@ -110,4 +115,3 @@ def test_monte_carlo_cli_runs_inprocess(tmp_path: Path, monkeypatch) -> None:
     for (_, _), grp in sc.groupby(["ProjectID", "Metric"]):
         g = grp.sort_values("Value")
         assert (g["CDF"].diff().fillna(0) >= -1e-9).all()
-

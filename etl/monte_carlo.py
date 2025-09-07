@@ -100,9 +100,7 @@ def run(iters, seed, processed_dir, samples_dir, outdir):
 
     # Derive a baseline per project (use mean of latest EAC/BAC as a simple proxy)
     base = (
-        evm.groupby("ProjectID", as_index=False)
-        .agg({"EAC": "mean", "BAC": "mean"})
-        .rename(columns={"EAC": "EAC_base"})
+        evm.groupby("ProjectID", as_index=False).agg({"EAC": "mean", "BAC": "mean"}).rename(columns={"EAC": "EAC_base"})
     )
 
     # ---- 2) Risk Register (coerce numerics) ----
@@ -162,9 +160,7 @@ def run(iters, seed, processed_dir, samples_dir, outdir):
 
         # Sample cost and schedule-day impacts per risk (iters × n_risks)
         cost = pert(rc["CostLow"], rc["CostML"], rc["CostHigh"], (iters, n), rng)
-        days = pert(
-            rc["SchedDaysLow"], rc["SchedDaysML"], rc["SchedDaysHigh"], (iters, n), rng
-        )
+        days = pert(rc["SchedDaysLow"], rc["SchedDaysML"], rc["SchedDaysHigh"], (iters, n), rng)
 
         # Sum impacts across risks per iteration
         cost_imp = (cost * gates).sum(axis=1)  # shape: (iters,)
@@ -183,9 +179,7 @@ def run(iters, seed, processed_dir, samples_dir, outdir):
         # Finish-days-over-baseline per iteration (toy proxy)
         finish_days = days_imp + pdays
 
-        df = pd.DataFrame(
-            {"ProjectID": proj, "EAC": EAC, "FinishDaysOverBaseline": finish_days}
-        )
+        df = pd.DataFrame({"ProjectID": proj, "EAC": EAC, "FinishDaysOverBaseline": finish_days})
         results.append(df)
 
     # All-iteration runs
@@ -225,15 +219,9 @@ def run(iters, seed, processed_dir, samples_dir, outdir):
     s_curve = pd.DataFrame(sc_rows)
 
     # ---- Write outputs ----
-    (outdir / "monte_carlo_runs.parquet").write_bytes(
-        runs.to_parquet(index=False) or b""
-    )
-    (outdir / "monte_carlo_summary.parquet").write_bytes(
-        summary.to_parquet(index=False) or b""
-    )
-    (outdir / "forecast_s_curves.parquet").write_bytes(
-        s_curve.to_parquet(index=False) or b""
-    )
+    (outdir / "monte_carlo_runs.parquet").write_bytes(runs.to_parquet(index=False) or b"")
+    (outdir / "monte_carlo_summary.parquet").write_bytes(summary.to_parquet(index=False) or b"")
+    (outdir / "forecast_s_curves.parquet").write_bytes(s_curve.to_parquet(index=False) or b"")
 
     print(f"[monte_carlo] Wrote outputs in {outdir}")
 

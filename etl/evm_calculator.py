@@ -63,14 +63,22 @@ def compute_metrics_row(row: Dict[str, Any]) -> Dict[str, float]:
     # Classic EVM KPIs (with safe denominators handled by simple checks)
     cpi = (ev / ac) if ac else float("nan")
     spi = (ev / pv) if pv else float("nan")
-    eac = ac + (bac - ev)          # Transparent EAC = AC + ETC, with ETC ≈ (BAC - EV)
+    eac = ac + (bac - ev)  # Transparent EAC = AC + ETC, with ETC ≈ (BAC - EV)
     vac = bac - eac
     cv = ev - ac
     sv = ev - pv
 
     return {
-        "PV": pv, "EV": ev, "AC": ac, "BAC": bac,
-        "CPI": cpi, "SPI": spi, "EAC": eac, "VAC": vac, "CV": cv, "SV": sv,
+        "PV": pv,
+        "EV": ev,
+        "AC": ac,
+        "BAC": bac,
+        "CPI": cpi,
+        "SPI": spi,
+        "EAC": eac,
+        "VAC": vac,
+        "CV": cv,
+        "SV": sv,
     }
 
 
@@ -146,9 +154,19 @@ def _compute_metrics_timeseries(schedule_df: pd.DataFrame, cost_df: pd.DataFrame
 
     # Ensure column order is friendly and deterministic
     cols = [
-        "ProjectID", "WBS", "Period",
-        "EV", "PV", "AC", "BAC",
-        "CPI", "SPI", "EAC", "VAC", "CV", "SV",
+        "ProjectID",
+        "WBS",
+        "Period",
+        "EV",
+        "PV",
+        "AC",
+        "BAC",
+        "CPI",
+        "SPI",
+        "EAC",
+        "VAC",
+        "CV",
+        "SV",
     ]
     return out.loc[:, cols]
 
@@ -156,7 +174,7 @@ def _compute_metrics_timeseries(schedule_df: pd.DataFrame, cost_df: pd.DataFrame
 # -----------------------------------------------------------------------------
 # Polymorphic public API: compute_metrics(...)
 # -----------------------------------------------------------------------------
-def compute_metrics(  # type: ignore[override]
+def compute_metrics(
     a: Union[Dict[str, Any], pd.DataFrame],
     b: Union[pd.DataFrame, None] = None,
 ) -> Union[Dict[str, float], pd.DataFrame]:
@@ -183,9 +201,7 @@ def compute_metrics(  # type: ignore[override]
         return _compute_metrics_timeseries(a, b)
 
     # Anything else: explicit error helps developers
-    raise TypeError(
-        "compute_metrics expects either (row_dict) or (schedule_df, cost_df) DataFrames."
-    )
+    raise TypeError("compute_metrics expects either (row_dict) or (schedule_df, cost_df) DataFrames.")
 
 
 # -----------------------------------------------------------------------------

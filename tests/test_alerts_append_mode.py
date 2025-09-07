@@ -16,8 +16,11 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+
 import pandas as pd
+
 from services.alerts import main as alerts_main  # type: ignore
+
 
 def _prep_inputs(processed: Path) -> None:
     processed.mkdir(parents=True, exist_ok=True)
@@ -50,11 +53,7 @@ def _prep_inputs(processed: Path) -> None:
 def _write_cfg(root: Path) -> Path:
     cfg = root / "config.yaml"
     cfg.write_text(
-        "alerts:\n"
-        "  slack_enabled: false\n"
-        "  email_enabled: false\n"
-        "  jira_enabled: false\n"
-        "  dry_run: true\n",
+        "alerts:\n  slack_enabled: false\n  email_enabled: false\n  jira_enabled: false\n  dry_run: true\n",
         encoding="utf-8",
     )
     return cfg

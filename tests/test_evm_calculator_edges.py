@@ -12,7 +12,9 @@
 from __future__ import annotations
 
 import math
+
 import pandas as pd
+
 from etl.evm_calculator import compute_metrics  # import your public function
 
 
@@ -54,8 +56,8 @@ def test_compute_metrics_handles_zero_pv_and_zero_ac() -> None:
             "ProjectID": ["PZ"],
             "WBS": ["W1"],
             "Period": ["2025-01"],
-            "ActualCost": [0.0],   # AC=0
-            "Budget": [0.0],       # PV=0
+            "ActualCost": [0.0],  # AC=0
+            "Budget": [0.0],  # PV=0
         }
     )
 

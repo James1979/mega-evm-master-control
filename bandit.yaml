@@ -1,0 +1,9 @@
+# bandit.yaml
+# Keep security checks on app/library code, skip tests and common virtualenv/build dirs.
+exclude_dirs:
+  - tests
+  - .venv
+  - venv
+  - env
+  - build
+  - dist

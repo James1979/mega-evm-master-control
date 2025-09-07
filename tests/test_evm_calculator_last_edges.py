@@ -10,7 +10,9 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
+
 from etl.evm_calculator import compute_metrics
+
 
 def test_compute_metrics_zero_pv_ac_and_nan_bac_on_latest() -> None:
     # Schedule: two rows for the same WBS; latest has BAC = NaN to hit fallback
@@ -29,8 +31,8 @@ def test_compute_metrics_zero_pv_ac_and_nan_bac_on_latest() -> None:
             "ProjectID": ["Z1", "Z1"],
             "WBS": ["W1", "W1"],
             "Period": ["2025-01", "2025-02"],  # latest is 2025-02
-            "ActualCost": [2_000.0, 0.0],      # AC=0 on latest
-            "Budget": [2_500.0, 0.0],          # PV=0 on latest
+            "ActualCost": [2_000.0, 0.0],  # AC=0 on latest
+            "Budget": [2_500.0, 0.0],  # PV=0 on latest
         }
     )
 

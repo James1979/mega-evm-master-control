@@ -14,8 +14,8 @@ We validate:
 """
 
 import math
-import pandas as pd
 
+import pandas as pd
 
 # Function under test
 from etl.evm_calculator import compute_metrics  # type: ignore[attr-defined]
@@ -36,11 +36,19 @@ def test_compute_metrics_shapes_and_columns(schedule_df: pd.DataFrame, cost_df: 
 
     # Required EVM columns (now includes CV/SV/EAC/VAC for full coverage)
     required_cols = [
-        "ProjectID", "WBS", "Period",
-        "EV", "PV", "AC",
-        "CPI", "SPI",
-        "BAC", "EAC", "VAC",
-        "CV", "SV",
+        "ProjectID",
+        "WBS",
+        "Period",
+        "EV",
+        "PV",
+        "AC",
+        "CPI",
+        "SPI",
+        "BAC",
+        "EAC",
+        "VAC",
+        "CV",
+        "SV",
     ]
     for col in required_cols:
         assert col in out.columns, f"Missing expected column: {col}"

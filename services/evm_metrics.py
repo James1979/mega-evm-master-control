@@ -1,5 +1,7 @@
 from __future__ import annotations
+
 import pandas as pd
+
 
 def compute_kpis(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
